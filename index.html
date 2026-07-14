@@ -1,0 +1,2257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
+  <script>
+    (() => {
+      const stopZoom = (event) => event.preventDefault();
+      document.addEventListener('gesturestart', stopZoom, { passive: false });
+      document.addEventListener('gesturechange', stopZoom, { passive: false });
+      document.addEventListener('gestureend', stopZoom, { passive: false });
+      document.addEventListener('dblclick', stopZoom, { passive: false });
+      document.addEventListener('touchmove', (event) => {
+        if (event.touches.length > 1) event.preventDefault();
+      }, { passive: false });
+      document.addEventListener('wheel', (event) => {
+        if (event.ctrlKey || event.metaKey) event.preventDefault();
+      }, { passive: false });
+      document.addEventListener('keydown', (event) => {
+        if ((event.ctrlKey || event.metaKey) && ['+', '-', '=', '0'].includes(event.key)) event.preventDefault();
+      });
+    })();
+  </script>
+  <title>Tally Clicker</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    :root {
+      --brat-font: Arial, "Helvetica Neue", Helvetica, sans-serif;
+      --green: #8ace00;
+      --black: #050505;
+      --white: #ffffff;
+    }
+
+    body {
+      margin: 0;
+      padding: 14px;
+      color: var(--black);
+      font-family: var(--brat-font);
+      font-weight: 400;
+      background: var(--green);
+      text-shadow: 0 0 0.6px rgba(5, 5, 5, 0.4);
+      -webkit-text-size-adjust: 100%;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.07) 0, rgba(255, 255, 255, 0.07) 1px, transparent 1px, transparent 4px),
+        repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.045) 0, rgba(0, 0, 0, 0.045) 1px, transparent 1px, transparent 5px);
+      mix-blend-mode: soft-light;
+      opacity: 0.42;
+    }
+
+    button,
+    input {
+      font-family: var(--brat-font);
+    }
+
+    button {
+      min-height: 56px;
+      color: var(--black);
+      background: var(--green);
+      border: 4px solid var(--black);
+      border-radius: 0;
+      box-shadow: none;
+      font-size: clamp(24px, 7vw, 42px);
+      font-weight: 500;
+      font-stretch: normal;
+      letter-spacing: 0;
+      filter: blur(0.2px);
+      text-shadow: 0 0 1.5px rgba(5, 5, 5, 0.42);
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    button:active {
+      color: var(--green);
+      background: var(--black);
+      transform: none;
+    }
+
+    button:disabled {
+      color: #476600;
+      background: #a6cf4d;
+      cursor: not-allowed;
+    }
+
+    input {
+      width: 100%;
+      min-height: 52px;
+      padding: 8px 10px;
+      color: var(--black);
+      background: var(--green);
+      border: 4px solid var(--black);
+      border-radius: 0;
+      font-size: 28px;
+      font-weight: 500;
+      outline: none;
+    }
+
+    .window {
+      width: min(760px, 100%);
+      min-height: calc(100vh - 20px);
+      margin: 0 auto;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      background: var(--green);
+      border: 4px solid var(--black);
+    }
+
+    .titlebar {
+      min-height: 52px;
+      padding: 0;
+      color: var(--black);
+      background: var(--green);
+      border-bottom: 4px solid var(--black);
+      font-size: 34px;
+      font-weight: 500;
+      font-stretch: normal;
+      letter-spacing: 0;
+      text-transform: lowercase;
+      filter: blur(0.34px);
+      text-shadow: 0 0 1.8px rgba(5, 5, 5, 0.48);
+    }
+
+    .menu-toggle {
+      width: 100%;
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      color: inherit;
+      background: transparent;
+      border: 0;
+      font: inherit;
+      text-align: left;
+      text-transform: lowercase;
+      filter: none;
+      text-shadow: inherit;
+    }
+
+    .menu-toggle::after {
+      content: "↓";
+      font-size: 0.8em;
+      line-height: 1;
+    }
+
+    .menu-toggle[aria-expanded="true"]::after {
+      content: "↑";
+    }
+
+    .mode-menu {
+      display: none;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      padding: 10px;
+      border-bottom: 4px solid var(--black);
+    }
+
+    .mode-menu.open {
+      display: grid;
+    }
+
+    .mode-button,
+    .streak-button {
+      min-height: 54px;
+      color: var(--black);
+      background: var(--green);
+      font-size: clamp(20px, 5vw, 30px);
+      text-transform: lowercase;
+    }
+
+    .streak-button {
+      display: grid;
+      place-items: center;
+      padding: 8px 10px;
+      border: 4px solid var(--black);
+      font-family: var(--brat-font);
+      font-weight: 500;
+      text-decoration: none;
+      filter: blur(0.2px);
+      text-shadow: 0 0 1.5px rgba(5, 5, 5, 0.42);
+    }
+
+    .streak-button:active {
+      color: var(--green);
+      background: var(--black);
+    }
+
+    .mode-button.active {
+      color: var(--green);
+      background: var(--black);
+    }
+
+    .mode-button.todo-mode {
+      text-transform: lowercase;
+    }
+
+    .content {
+      display: grid;
+      gap: 14px;
+      padding: 14px;
+    }
+
+    .panel {
+      display: none;
+      gap: 14px;
+    }
+
+    .panel.active {
+      display: grid;
+    }
+
+    .display {
+      min-height: 238px;
+      display: grid;
+      place-items: center;
+      padding: 10px;
+      color: var(--black);
+      background: var(--green);
+      border: 4px solid var(--black);
+      font-size: clamp(104px, 30vw, 196px);
+      font-weight: 500;
+      font-stretch: normal;
+      line-height: 0.9;
+      letter-spacing: 0;
+      filter: blur(0.38px);
+      text-shadow: 0 0 2.4px rgba(5, 5, 5, 0.55);
+      transition: background 90ms steps(2, end), color 90ms steps(2, end);
+      overflow-wrap: anywhere;
+    }
+
+    .display.label-display {
+      min-height: 128px;
+      align-content: center;
+      gap: 4px;
+      font-size: clamp(40px, 12vw, 82px);
+      text-align: center;
+    }
+
+    .display.plus-flash,
+    .counter-card.plus-flash {
+      color: var(--green);
+      background: var(--black);
+    }
+
+    .display.minus-flash,
+    .counter-card.minus-flash {
+      color: var(--green);
+      background: var(--black);
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .plus,
+    .minus {
+      min-height: 118px;
+      font-size: clamp(40px, 12vw, 72px);
+    }
+
+    .clear,
+    .wide {
+      grid-column: 1 / -1;
+    }
+
+    .clear {
+      min-height: 66px;
+      color: var(--green);
+      background: var(--black);
+      font-size: 28px;
+      text-transform: lowercase;
+    }
+
+    .counter-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .counter-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 116px;
+      gap: 8px;
+      align-items: stretch;
+      min-height: 106px;
+      padding: 8px;
+      color: var(--black);
+      background: var(--green);
+      border: 4px solid var(--black);
+      transition: background 90ms steps(2, end), color 90ms steps(2, end);
+    }
+
+    .counter-name {
+      display: grid;
+      align-content: center;
+      min-width: 0;
+      font-size: clamp(30px, 8vw, 54px);
+      font-weight: 500;
+      line-height: 0.95;
+      overflow-wrap: anywhere;
+    }
+
+    button.counter-name {
+      min-height: 0;
+      padding: 0;
+      color: inherit;
+      background: transparent;
+      border: 0;
+      text-align: left;
+      cursor: text;
+    }
+
+    button.counter-name:active {
+      color: inherit;
+      background: transparent;
+    }
+
+    button.counter-name:focus-visible {
+      outline: 4px solid var(--black);
+      outline-offset: 3px;
+    }
+
+    .counter-name-input {
+      min-height: 78px;
+      padding: 8px 10px;
+      line-height: 0.95;
+    }
+
+    .counter-score {
+      display: grid;
+      place-items: center;
+      min-width: 0;
+      color: var(--green);
+      background: var(--black);
+      border: 4px solid var(--black);
+      font-size: clamp(48px, 14vw, 76px);
+      font-weight: 500;
+      line-height: 0.9;
+    }
+
+    .counter-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .counter-actions button {
+      min-height: 58px;
+      font-size: clamp(24px, 7vw, 42px);
+    }
+
+    .multiple-action {
+      min-height: 66px;
+      font-size: 28px;
+      text-transform: lowercase;
+    }
+
+    .list-toolbar {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .list-select {
+      min-height: 60px;
+      min-width: 0;
+      width: 100%;
+      padding: 8px 10px;
+      color: var(--black);
+      background: var(--green);
+      border: 4px solid var(--black);
+      border-radius: 0;
+      font: 500 26px/1 var(--brat-font);
+      text-transform: lowercase;
+      filter: blur(0.24px);
+      text-shadow: 0 0 1.6px rgba(5, 5, 5, 0.46);
+    }
+
+    .list-select option {
+      color: var(--black);
+      background: var(--green);
+    }
+
+    .list-toolbar button,
+    .list-actions button {
+      min-height: 60px;
+      padding: 8px 12px;
+      font-size: 24px;
+      text-transform: lowercase;
+    }
+
+    .list-toolbar .delete-list,
+    .remove-skill {
+      color: var(--green);
+      background: var(--black);
+    }
+
+    .run-summary {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      color: var(--black);
+      background: var(--green);
+      border: 4px solid var(--black);
+      filter: blur(0.24px);
+      text-shadow: 0 0 1.6px rgba(5, 5, 5, 0.46);
+    }
+
+    .run-summary-line {
+      font-size: clamp(22px, 6vw, 34px);
+      font-weight: 500;
+      line-height: 0.95;
+      text-transform: lowercase;
+    }
+
+    .run-current-skill {
+      display: grid;
+      gap: 3px;
+      padding: 12px;
+      color: var(--black);
+      background: var(--green);
+      border: 4px solid var(--black);
+      filter: blur(0.24px);
+      text-shadow: 0 0 1.6px rgba(5, 5, 5, 0.46);
+    }
+
+    .run-current-label {
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 1;
+      text-transform: lowercase;
+    }
+
+    .run-current-name {
+      font-size: clamp(24px, 7vw, 42px);
+      font-weight: 500;
+      line-height: 0.92;
+      overflow-wrap: anywhere;
+      text-transform: lowercase;
+    }
+
+    .progress-track {
+      height: 28px;
+      overflow: hidden;
+      background: var(--green);
+      border: 4px solid var(--black);
+    }
+
+    .progress-fill {
+      width: 0;
+      height: 100%;
+      background: var(--black);
+      transition: width 140ms steps(3, end);
+    }
+
+    .current-skill {
+      min-height: 238px;
+      display: grid;
+      place-items: center;
+      position: relative;
+      padding: 10px;
+      color: var(--black);
+      background: var(--green);
+      border: 4px solid var(--black);
+      filter: blur(0.38px);
+      text-shadow: 0 0 2.4px rgba(5, 5, 5, 0.55);
+    }
+
+    .current-skill-count {
+      font-size: clamp(104px, 30vw, 196px);
+      font-weight: 500;
+      line-height: 0.8;
+      letter-spacing: 0;
+    }
+
+    .current-skill-target {
+      position: absolute;
+      right: 14px;
+      bottom: 11px;
+      font-size: clamp(28px, 8vw, 54px);
+      font-weight: 500;
+      line-height: 0.8;
+      letter-spacing: -0.06em;
+    }
+
+    .success-message {
+      display: none;
+      padding: 14px;
+      color: var(--green);
+      background: var(--black);
+      border: 4px solid var(--black);
+      font-size: clamp(28px, 8vw, 50px);
+      font-weight: 500;
+      line-height: 0.9;
+      text-align: center;
+      text-transform: lowercase;
+      filter: blur(0.24px);
+      text-shadow: 0 0 1.6px currentColor;
+    }
+
+    .success-message.active {
+      display: block;
+    }
+
+    .list-table-wrap {
+      overflow-x: auto;
+      border: 4px solid var(--black);
+    }
+
+    .list-table {
+      width: 100%;
+      min-width: 440px;
+      border-collapse: collapse;
+      background: var(--green);
+      font-size: clamp(20px, 5vw, 30px);
+      font-weight: 500;
+      text-align: left;
+      text-transform: lowercase;
+      filter: blur(0.24px);
+      text-shadow: 0 0 1.2px currentColor;
+    }
+
+    .list-table th,
+    .list-table td {
+      padding: 10px;
+      border: 2px solid var(--black);
+      line-height: 1;
+    }
+
+    .list-table th {
+      color: var(--green);
+      background: var(--black);
+    }
+
+    .list-table .is-current td {
+      background: var(--green);
+    }
+
+    .list-table .is-complete td {
+      color: var(--black);
+      background: var(--green);
+    }
+
+    .list-table .skill-progress {
+      white-space: nowrap;
+      text-align: center;
+    }
+
+    .list-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .list-reset-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .list-reset-actions button {
+      min-height: 62px;
+      padding: 8px 12px;
+      font-size: 24px;
+      text-transform: lowercase;
+    }
+
+    .list-reset-actions .todo-reset {
+      grid-column: 1 / -1;
+      color: var(--black);
+      background: var(--green);
+    }
+
+    .list-controls .clear {
+      grid-column: 1 / -1;
+    }
+
+    .list-empty {
+      min-height: 148px;
+    }
+
+    .skill-flash {
+      position: fixed;
+      inset: 0;
+      z-index: 35;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      color: var(--black);
+      pointer-events: none;
+      opacity: 0;
+      background: var(--green);
+    }
+
+    .skill-flash.active {
+      animation: skill-screen-flash 460ms steps(1, end) both;
+    }
+
+    .skill-flash-copy {
+      width: min(660px, 100%);
+      font-weight: 500;
+      line-height: 0.78;
+      text-align: center;
+      letter-spacing: -0.08em;
+      text-transform: uppercase;
+      filter: blur(0.85px);
+    }
+
+    .skill-flash-status {
+      font-size: clamp(56px, 18vw, 128px);
+    }
+
+    .skill-flash-skill {
+      margin-top: 18px;
+      font-size: clamp(24px, 7vw, 46px);
+      line-height: 0.9;
+      letter-spacing: -0.04em;
+    }
+
+    .celebration {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      overflow: hidden;
+      pointer-events: auto;
+      background: var(--green);
+      animation: celebration-strobe 520ms steps(1, end) infinite;
+    }
+
+    .celebration::before,
+    .celebration::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .celebration::before {
+      display: none;
+    }
+
+    .celebration::after {
+      display: none;
+    }
+
+    .celebration.active {
+      display: grid;
+    }
+
+    .celebration-card {
+      position: relative;
+      z-index: 1;
+      width: min(620px, 100%);
+      padding: clamp(28px, 9vw, 72px) 20px;
+      color: var(--black);
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      font-size: clamp(58px, 18vw, 128px);
+      font-weight: 500;
+      line-height: 0.8;
+      text-align: center;
+      letter-spacing: -0.08em;
+      text-shadow: none;
+      text-transform: uppercase;
+      animation: celebration-card 520ms steps(1, end) infinite;
+    }
+
+    .celebration-chant {
+      line-height: 0.78;
+      font-stretch: normal;
+      filter: blur(0.9px);
+    }
+
+    .celebration-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      min-height: 0;
+      width: 52px;
+      height: 52px;
+      padding: 0 0 5px;
+      color: inherit;
+      background: transparent;
+      border: 3px solid currentColor;
+      font-size: 46px;
+      line-height: 1;
+      text-shadow: none;
+    }
+
+    .celebration-close:active {
+      color: var(--green);
+      background: var(--black);
+    }
+
+    @keyframes skill-screen-flash {
+      0% { opacity: 0; color: var(--black); background: var(--green); }
+      12% { opacity: 1; color: var(--black); background: var(--green); }
+      28% { opacity: 1; color: var(--green); background: var(--black); }
+      46% { opacity: 1; color: var(--black); background: var(--green); }
+      64% { opacity: 1; color: var(--green); background: var(--black); }
+      82% { opacity: 1; color: var(--black); background: var(--green); }
+      100% { opacity: 0; color: var(--green); background: var(--black); }
+    }
+
+    @keyframes celebration-card {
+      0%, 49% { color: var(--black); text-shadow: none; transform: translateX(-2px); }
+      50%, 100% { color: var(--green); text-shadow: none; transform: translateX(2px); }
+    }
+
+    @keyframes celebration-strobe {
+      0%, 49% { background: var(--green); }
+      50%, 100% { background: var(--black); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .celebration,
+      .celebration-card,
+      .skill-flash.active {
+        animation: none;
+      }
+
+      .skill-flash.active {
+        opacity: 1;
+        color: var(--black);
+        background: var(--green);
+      }
+    }
+
+    .remove-action,
+    .remove-confirm {
+      color: var(--green);
+      background: var(--black);
+    }
+
+    .counter-dialog {
+      width: min(560px, calc(100% - 24px));
+      max-height: calc(100vh - 24px);
+      margin: auto;
+      padding: 0;
+      color: var(--black);
+      background: var(--green);
+      border: 4px solid var(--black);
+      font-family: var(--brat-font);
+    }
+
+    .counter-dialog::backdrop {
+      background: rgba(5, 5, 5, 0.58);
+    }
+
+    .dialog-content {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+    }
+
+    .dialog-title {
+      margin: 0;
+      font-size: clamp(32px, 9vw, 50px);
+      line-height: 0.95;
+      text-transform: lowercase;
+    }
+
+    .dialog-description {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 500;
+      line-height: 1.05;
+      text-transform: lowercase;
+    }
+
+    .dialog-label {
+      font-size: 22px;
+      font-weight: 500;
+      text-transform: lowercase;
+    }
+
+    .dialog-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .remove-options {
+      display: grid;
+      max-height: min(42vh, 360px);
+      gap: 8px;
+      overflow-y: auto;
+    }
+
+    .remove-option {
+      min-height: 60px;
+      padding: 10px 12px;
+      color: var(--black);
+      background: var(--green);
+      font-size: 26px;
+      line-height: 1;
+      text-align: left;
+      text-transform: lowercase;
+    }
+
+    .remove-option[aria-pressed="true"] {
+      color: var(--green);
+      background: var(--black);
+    }
+
+    .empty {
+      min-height: 132px;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      color: var(--black);
+      background: var(--green);
+      border: 4px dashed var(--black);
+      font-size: 28px;
+      font-weight: 500;
+      text-align: center;
+      text-transform: lowercase;
+    }
+
+    .statusbar {
+      min-height: 38px;
+      padding: 9px 12px;
+      color: var(--black);
+      background: var(--green);
+      border-top: 4px solid var(--black);
+      font-size: 16px;
+      font-weight: 500;
+      font-stretch: normal;
+      text-transform: lowercase;
+      filter: blur(0.22px);
+      text-shadow: 0 0 1.4px rgba(5, 5, 5, 0.38);
+    }
+
+    @media (max-width: 560px) {
+      body {
+        padding: 6px;
+      }
+
+      .window {
+        min-height: calc(100vh - 12px);
+      }
+
+      .titlebar {
+        font-size: 28px;
+      }
+
+      .controls,
+      .counter-actions,
+      .list-actions,
+      .list-reset-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .display {
+        min-height: 210px;
+      }
+
+      .counter-card {
+        grid-template-columns: 1fr;
+      }
+
+      .counter-score {
+        min-height: 86px;
+      }
+
+      .wide,
+      .clear {
+        grid-column: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="window" aria-label="Tally Clicker">
+    <header class="titlebar">
+      <button id="menuToggle" class="menu-toggle" type="button" aria-expanded="false" aria-controls="modeMenu">tally clicker</button>
+    </header>
+
+    <nav id="modeMenu" class="mode-menu" aria-label="Tally Clicker menu">
+      <button class="mode-button active" type="button" data-mode="single">single</button>
+      <button class="mode-button" type="button" data-mode="multiple">multiple</button>
+      <button class="mode-button todo-mode" type="button" data-mode="list">todo</button>
+      <a class="streak-button" href="./streak_counter.html">streak counter</a>
+    </nav>
+
+    <section class="content">
+      <section id="singlePanel" class="panel active" aria-label="Single point counter">
+        <div id="countDisplay" class="display" aria-live="polite">0</div>
+        <div class="controls">
+          <button id="plusButton" class="plus" type="button" aria-label="Add one point">+</button>
+          <button id="minusButton" class="minus" type="button" aria-label="Subtract one point">-</button>
+          <button id="clearButton" class="clear" type="button">clear</button>
+        </div>
+      </section>
+
+      <section id="multiplePanel" class="panel" aria-label="Multiple point counters">
+        <div id="multipleLeader" class="display label-display" aria-live="polite">multiple points</div>
+        <div id="multipleList" class="counter-list"></div>
+        <div class="controls">
+          <button id="resetMultiple" class="clear" type="button">reset multiple</button>
+          <button id="addMultiple" class="multiple-action" type="button">add</button>
+          <button id="removeMultiple" class="multiple-action remove-action" type="button">remove</button>
+        </div>
+      </section>
+
+      <section id="listPanel" class="panel" aria-label="Skill TODO run-throughs">
+        <div class="run-current-skill" aria-live="polite">
+          <div class="run-current-label">current skill</div>
+          <div id="listCurrentSkill" class="run-current-name">no todo selected</div>
+        </div>
+
+        <div class="run-summary" aria-live="polite">
+          <div id="listProgressText" class="run-summary-line">0% complete</div>
+          <div class="progress-track" aria-hidden="true"><div id="listProgressFill" class="progress-fill"></div></div>
+        </div>
+
+        <div class="current-skill" aria-live="polite">
+          <div id="listCurrentCount" class="current-skill-count"></div>
+          <div id="listCurrentTarget" class="current-skill-target"></div>
+        </div>
+
+        <div id="listSuccess" class="success-message" role="status" aria-live="polite">TODO complete! great work.</div>
+
+        <div class="controls list-controls">
+          <button id="listPlus" class="plus" type="button" aria-label="Log one repetition for the current skill">+</button>
+          <button id="listMinus" class="minus" type="button" aria-label="Remove one repetition from the current skill">−</button>
+          <button id="resetCurrentSkill" class="clear" type="button">reset</button>
+        </div>
+
+        <div class="list-table-wrap">
+          <table class="list-table">
+            <thead>
+              <tr><th scope="col">skill</th><th scope="col">reps</th><th scope="col">status</th></tr>
+            </thead>
+            <tbody id="listTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="list-actions">
+          <button id="addSkill" type="button">add skill</button>
+          <button id="removeSkill" class="remove-skill" type="button">remove skill</button>
+        </div>
+
+        <div class="list-toolbar">
+          <button id="newList" type="button">new</button>
+          <button id="renameList" type="button">rename</button>
+          <button id="deleteList" class="delete-list" type="button">delete</button>
+        </div>
+
+        <select id="listSelector" class="list-select" aria-label="Choose a TODO"></select>
+
+        <div class="list-reset-actions">
+          <button id="resetTodo" class="todo-reset" type="button">reset all</button>
+        </div>
+      </section>
+    </section>
+
+    <footer id="statusbar" class="statusbar" role="status" aria-live="polite">ready</footer>
+  </main>
+
+  <dialog id="addDialog" class="counter-dialog" aria-labelledby="addDialogTitle">
+    <form id="addCounterForm" class="dialog-content">
+      <h2 id="addDialogTitle" class="dialog-title">add class / team</h2>
+      <label class="dialog-label" for="addCounterName">name</label>
+      <input id="addCounterName" autocomplete="off" maxlength="80" placeholder="class, team, or person">
+      <div class="dialog-actions">
+        <button id="cancelAdd" type="button">cancel</button>
+        <button type="submit">add</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="removeDialog" class="counter-dialog" aria-labelledby="removeDialogTitle">
+    <form id="removeCounterForm" class="dialog-content">
+      <h2 id="removeDialogTitle" class="dialog-title">remove class / team</h2>
+      <p class="dialog-description">choose one, then confirm</p>
+      <div id="removeOptions" class="remove-options" aria-label="Classes and teams to remove"></div>
+      <div class="dialog-actions">
+        <button id="cancelRemove" type="button">cancel</button>
+        <button id="confirmRemove" class="remove-confirm" type="submit" disabled>remove selected</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="newListDialog" class="counter-dialog" aria-labelledby="newListDialogTitle">
+    <form id="newListForm" class="dialog-content">
+      <h2 id="newListDialogTitle" class="dialog-title">new TODO</h2>
+      <label class="dialog-label" for="newListName">TODO name</label>
+      <input id="newListName" autocomplete="off" maxlength="80" placeholder="for example: floor form">
+      <div class="dialog-actions">
+        <button id="cancelNewList" type="button">cancel</button>
+        <button type="submit">create</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="renameListDialog" class="counter-dialog" aria-labelledby="renameListDialogTitle">
+    <form id="renameListForm" class="dialog-content">
+      <h2 id="renameListDialogTitle" class="dialog-title">rename TODO</h2>
+      <label class="dialog-label" for="renameListName">TODO name</label>
+      <input id="renameListName" autocomplete="off" maxlength="80">
+      <div class="dialog-actions">
+        <button id="cancelRenameList" type="button">cancel</button>
+        <button type="submit">save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="deleteListDialog" class="counter-dialog" aria-labelledby="deleteListDialogTitle">
+    <form id="deleteListForm" class="dialog-content">
+      <h2 id="deleteListDialogTitle" class="dialog-title">delete this TODO?</h2>
+      <p id="deleteListDescription" class="dialog-description">this removes every skill and its progress.</p>
+      <div class="dialog-actions">
+        <button id="cancelDeleteList" type="button">cancel</button>
+        <button class="remove-confirm" type="submit">delete</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="addSkillDialog" class="counter-dialog" aria-labelledby="addSkillDialogTitle">
+    <form id="addSkillForm" class="dialog-content">
+      <h2 id="addSkillDialogTitle" class="dialog-title">add skill</h2>
+      <label class="dialog-label" for="addSkillName">skill name</label>
+      <input id="addSkillName" autocomplete="off" maxlength="80" placeholder="for example: handstand">
+      <label class="dialog-label" for="addSkillReps">reps to complete</label>
+      <input id="addSkillReps" type="number" inputmode="numeric" min="1" max="999" step="1" value="1">
+      <div class="dialog-actions">
+        <button id="cancelAddSkill" type="button">cancel</button>
+        <button type="submit">add</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="removeSkillDialog" class="counter-dialog" aria-labelledby="removeSkillDialogTitle">
+    <form id="removeSkillForm" class="dialog-content">
+      <h2 id="removeSkillDialogTitle" class="dialog-title">remove skill</h2>
+      <p class="dialog-description">choose one, then confirm</p>
+      <div id="removeSkillOptions" class="remove-options" aria-label="Skills to remove"></div>
+      <div class="dialog-actions">
+        <button id="cancelRemoveSkill" type="button">cancel</button>
+        <button id="confirmRemoveSkill" class="remove-confirm" type="submit" disabled>remove selected</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="skillFlash" class="skill-flash" role="status" aria-live="polite" aria-atomic="true">
+    <div class="skill-flash-copy">
+      <div class="skill-flash-status">SKILL CLEARED</div>
+      <div id="skillFlashSkill" class="skill-flash-skill"></div>
+    </div>
+  </div>
+  <div id="celebration" class="celebration" aria-hidden="true">
+    <div id="celebrationCard" class="celebration-card">
+      <button id="closeCelebration" class="celebration-close" type="button" aria-label="Close celebration">×</button>
+      <div class="celebration-chant">ALL TASKS CLEARED</div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "custom-points-counter-state-v4";
+    const PREVIOUS_STORAGE_KEY = "custom-points-counter-state-v3";
+    const OLDER_STORAGE_KEY = "custom-points-counter-state-v2";
+    const LEGACY_SINGLE_KEY = "custom-points-counter-value-v1";
+    const DEFAULT_LIST_SEED_VERSION = 2;
+    const PREVIOUS_TODO_ID = "l3-floor-form-2026-07-13";
+    const TODAY_FULL_TURN_TODO = {
+      id: "l3-full-turn-2026-07-13",
+      name: "Full Turn TODO",
+      skills: [
+        { id: "stand-to-lunge-holds", name: "Stand-to-lunge holds in a row", reps: 20, completed: 0 },
+        { id: "power-hurdles", name: "Power hurdles in a row", reps: 20, completed: 0 },
+        { id: "half-arm-swing-preps", name: "Half-arm-swing preps for a full turn in a row", reps: 20, completed: 0 },
+        { id: "full-arm-swing-turn-preps", name: "Full-arm-swing turn preps in a row", reps: 20, completed: 0 },
+        { id: "landed-full-turns", name: "Landed full turns in a row", reps: 20, completed: 0 },
+        { id: "lunge-handstand-lunges", name: "Lunge-handstand-lunges in a row", reps: 20, completed: 0 },
+        { id: "forward-rolls-stuck", name: "Forward rolls to a stuck landing, feet and knees together", reps: 20, completed: 0 },
+        { id: "lunge-handstand-forward-rolls", name: "Lunge-handstand forward rolls", reps: 10, completed: 0 }
+      ]
+    };
+
+    const countDisplay = document.getElementById("countDisplay");
+    const plusButton = document.getElementById("plusButton");
+    const minusButton = document.getElementById("minusButton");
+    const clearButton = document.getElementById("clearButton");
+    const menuToggle = document.getElementById("menuToggle");
+    const modeMenu = document.getElementById("modeMenu");
+    const modeButtons = Array.from(document.querySelectorAll(".mode-button"));
+    const panels = {
+      single: document.getElementById("singlePanel"),
+      multiple: document.getElementById("multiplePanel"),
+      list: document.getElementById("listPanel")
+    };
+    const multipleLeader = document.getElementById("multipleLeader");
+    const multipleList = document.getElementById("multipleList");
+    const resetMultiple = document.getElementById("resetMultiple");
+    const addMultiple = document.getElementById("addMultiple");
+    const removeMultiple = document.getElementById("removeMultiple");
+    const addDialog = document.getElementById("addDialog");
+    const addCounterForm = document.getElementById("addCounterForm");
+    const addCounterName = document.getElementById("addCounterName");
+    const cancelAdd = document.getElementById("cancelAdd");
+    const removeDialog = document.getElementById("removeDialog");
+    const removeCounterForm = document.getElementById("removeCounterForm");
+    const removeOptions = document.getElementById("removeOptions");
+    const confirmRemove = document.getElementById("confirmRemove");
+    const cancelRemove = document.getElementById("cancelRemove");
+    const listSelector = document.getElementById("listSelector");
+    const newList = document.getElementById("newList");
+    const renameList = document.getElementById("renameList");
+    const deleteList = document.getElementById("deleteList");
+    const listProgressText = document.getElementById("listProgressText");
+    const listProgressFill = document.getElementById("listProgressFill");
+    const listCurrentSkill = document.getElementById("listCurrentSkill");
+    const listCurrentCount = document.getElementById("listCurrentCount");
+    const listCurrentTarget = document.getElementById("listCurrentTarget");
+    const listSuccess = document.getElementById("listSuccess");
+    const listPlus = document.getElementById("listPlus");
+    const listMinus = document.getElementById("listMinus");
+    const resetCurrentSkill = document.getElementById("resetCurrentSkill");
+    const resetTodo = document.getElementById("resetTodo");
+    const listTableBody = document.getElementById("listTableBody");
+    const addSkill = document.getElementById("addSkill");
+    const removeSkill = document.getElementById("removeSkill");
+    const newListDialog = document.getElementById("newListDialog");
+    const newListForm = document.getElementById("newListForm");
+    const newListName = document.getElementById("newListName");
+    const cancelNewList = document.getElementById("cancelNewList");
+    const renameListDialog = document.getElementById("renameListDialog");
+    const renameListForm = document.getElementById("renameListForm");
+    const renameListName = document.getElementById("renameListName");
+    const cancelRenameList = document.getElementById("cancelRenameList");
+    const deleteListDialog = document.getElementById("deleteListDialog");
+    const deleteListForm = document.getElementById("deleteListForm");
+    const deleteListDescription = document.getElementById("deleteListDescription");
+    const cancelDeleteList = document.getElementById("cancelDeleteList");
+    const addSkillDialog = document.getElementById("addSkillDialog");
+    const addSkillForm = document.getElementById("addSkillForm");
+    const addSkillName = document.getElementById("addSkillName");
+    const addSkillReps = document.getElementById("addSkillReps");
+    const cancelAddSkill = document.getElementById("cancelAddSkill");
+    const removeSkillDialog = document.getElementById("removeSkillDialog");
+    const removeSkillForm = document.getElementById("removeSkillForm");
+    const removeSkillOptions = document.getElementById("removeSkillOptions");
+    const confirmRemoveSkill = document.getElementById("confirmRemoveSkill");
+    const cancelRemoveSkill = document.getElementById("cancelRemoveSkill");
+    const skillFlash = document.getElementById("skillFlash");
+    const skillFlashSkill = document.getElementById("skillFlashSkill");
+    const celebration = document.getElementById("celebration");
+    const closeCelebration = document.getElementById("closeCelebration");
+    const statusbar = document.getElementById("statusbar");
+
+    let state = {
+      mode: "single",
+      single: 0,
+      multiple: [],
+      lists: [],
+      selectedListId: null,
+      listSeedVersion: 0
+    };
+    let audioContext = null;
+    let selectedRemovalId = null;
+    let selectedSkillRemovalId = null;
+    let skillFlashTimer = null;
+    const dialogFocus = new WeakMap();
+
+    function makeId(prefix) {
+      return prefix + "-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+    }
+
+    function normalizeName(value) {
+      return String(value || "").trim().replace(/\s+/g, " ");
+    }
+
+    function makeUniqueName(value, fallback, usedNames) {
+      const baseName = normalizeName(value) || fallback;
+      let name = baseName;
+      let suffix = 2;
+
+      while (usedNames.has(name.toLowerCase())) {
+        name = baseName + " " + suffix;
+        suffix += 1;
+      }
+
+      usedNames.add(name.toLowerCase());
+      return name;
+    }
+
+    function normalizeCounters(counters, prefix) {
+      const usedIds = new Set();
+      const usedNames = new Set();
+
+      return counters.map((counter, index) => {
+        const rawCounter = counter && typeof counter === "object" ? counter : {};
+        let id = String(rawCounter.id || makeId(prefix));
+        while (usedIds.has(id)) id = makeId(prefix);
+        usedIds.add(id);
+
+        return {
+          id,
+          name: makeUniqueName(rawCounter.name, prefix + " " + (index + 1), usedNames),
+          score: Number.isFinite(Number(rawCounter.score)) ? Number(rawCounter.score) : 0
+        };
+      });
+    }
+
+    function normalizeSkill(rawSkill, index, usedIds, usedNames) {
+      const skill = rawSkill && typeof rawSkill === "object" ? rawSkill : {};
+      let id = String(skill.id || makeId("skill"));
+      while (usedIds.has(id)) id = makeId("skill");
+      usedIds.add(id);
+
+      const reps = Math.max(1, Math.min(999, Math.round(Number(skill.reps) || 1)));
+      const completed = Math.max(0, Math.min(reps, Math.round(Number(skill.completed) || 0)));
+
+      return {
+        id,
+        name: makeUniqueName(skill.name, "skill " + (index + 1), usedNames),
+        reps,
+        completed
+      };
+    }
+
+    function normalizeLists(lists) {
+      if (!Array.isArray(lists)) return [];
+
+      const usedIds = new Set();
+      const usedNames = new Set();
+
+      return lists.map((rawList, index) => {
+        const list = rawList && typeof rawList === "object" ? rawList : {};
+        let id = String(list.id || makeId("list"));
+        while (usedIds.has(id)) id = makeId("list");
+        usedIds.add(id);
+
+        const skillIds = new Set();
+        const skillNames = new Set();
+        const skills = Array.isArray(list.skills)
+          ? list.skills.map((skill, skillIndex) => normalizeSkill(skill, skillIndex, skillIds, skillNames))
+          : [];
+
+        return {
+          id,
+          name: makeUniqueName(list.name, "TODO " + (index + 1), usedNames),
+          skills
+        };
+      });
+    }
+
+    function getSelectedList() {
+      return state.lists.find((list) => list.id === state.selectedListId) || null;
+    }
+
+    function getCurrentSkill(list) {
+      if (!list) return null;
+      return list.skills.find((skill) => skill.completed < skill.reps) || null;
+    }
+
+    function getListStats(list) {
+      const skills = list ? list.skills : [];
+      const totalReps = skills.reduce((sum, skill) => sum + skill.reps, 0);
+      const completedReps = skills.reduce((sum, skill) => sum + skill.completed, 0);
+      const percentage = totalReps ? Math.round((completedReps / totalReps) * 100) : 0;
+
+      return { percentage };
+    }
+
+    function loadState() {
+      let hasSavedState = false;
+
+      try {
+        const savedState = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(PREVIOUS_STORAGE_KEY) || localStorage.getItem(OLDER_STORAGE_KEY);
+        hasSavedState = Boolean(savedState);
+        const saved = JSON.parse(savedState || "{}");
+
+        if (saved && typeof saved === "object") {
+          state.mode = saved.mode === "list" ? "list" : saved.mode === "single" ? "single" : ["multiple", "teams", "individuals"].includes(saved.mode) ? "multiple" : "single";
+          state.single = Number.isFinite(Number(saved.single)) ? Number(saved.single) : state.single;
+
+          if (Array.isArray(saved.multiple)) {
+            state.multiple = normalizeCounters(saved.multiple, "group");
+          } else {
+            const oldCounters = [];
+            if (Array.isArray(saved.teams)) oldCounters.push(...saved.teams);
+            if (Array.isArray(saved.individuals)) oldCounters.push(...saved.individuals);
+            state.multiple = normalizeCounters(oldCounters, "group");
+          }
+
+          state.lists = normalizeLists(saved.lists);
+          state.selectedListId = state.lists.some((list) => list.id === saved.selectedListId)
+            ? saved.selectedListId
+            : state.lists[0]?.id || null;
+          state.listSeedVersion = Number.isFinite(Number(saved.listSeedVersion)) ? Number(saved.listSeedVersion) : 0;
+        }
+
+        const legacy = Number(localStorage.getItem(LEGACY_SINGLE_KEY));
+        if (!hasSavedState && Number.isFinite(legacy)) state.single = legacy;
+      } catch (error) {
+        state.mode = "single";
+        state.multiple = [];
+        state.lists = [];
+        state.selectedListId = null;
+        state.listSeedVersion = 0;
+      }
+
+      if (state.listSeedVersion < DEFAULT_LIST_SEED_VERSION) {
+        state.lists = state.lists.filter((list) => list.id !== PREVIOUS_TODO_ID);
+        const seededList = normalizeLists([TODAY_FULL_TURN_TODO])[0];
+        const existingList = state.lists.find((list) => list.name.toLowerCase() === seededList.name.toLowerCase());
+        const listToUse = existingList || seededList;
+        if (!existingList) state.lists.unshift(seededList);
+        state.selectedListId = listToUse.id;
+        state.listSeedVersion = DEFAULT_LIST_SEED_VERSION;
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        localStorage.setItem(LEGACY_SINGLE_KEY, String(state.single));
+      } catch (error) {
+        statusbar.textContent = "points changed. local save unavailable.";
+      }
+    }
+
+    function flash(element, kind) {
+      element.classList.remove("plus-flash", "minus-flash");
+      void element.offsetWidth;
+      element.classList.add(kind === "plus" ? "plus-flash" : "minus-flash");
+      window.setTimeout(() => {
+        element.classList.remove("plus-flash", "minus-flash");
+      }, 120);
+    }
+
+    function getAudioContext() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      return audioContext;
+    }
+
+    function playIncrementDing(context, now, score) {
+      const step = ((Math.max(score, 1) - 1) % 10);
+      const startsNewTen = score > 1 && step === 0;
+      const baseFrequency = 520;
+      const frequency = baseFrequency * Math.pow(2, step / 12);
+      const overtoneFrequency = frequency * 2.01;
+      const output = context.createGain();
+      const bell = context.createOscillator();
+      const shine = context.createOscillator();
+      const bellGain = context.createGain();
+      const shineGain = context.createGain();
+
+      bell.type = "sine";
+      shine.type = "sine";
+      bell.frequency.setValueAtTime(frequency, now);
+      shine.frequency.setValueAtTime(overtoneFrequency, now);
+
+      output.gain.setValueAtTime(0.0001, now);
+      output.gain.exponentialRampToValueAtTime(0.28, now + 0.008);
+      output.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+      bellGain.gain.setValueAtTime(0.75, now);
+      shineGain.gain.setValueAtTime(0.22, now);
+
+      bell.connect(bellGain);
+      shine.connect(shineGain);
+      bellGain.connect(output);
+      shineGain.connect(output);
+      output.connect(context.destination);
+
+      bell.start(now);
+      shine.start(now);
+      bell.stop(now + 0.44);
+      shine.stop(now + 0.24);
+
+      if (startsNewTen) {
+        // The regular click supplies the root; this short major arpeggio is
+        // a clear little level-up fanfare instead of a reset sound.
+        const cheerOne = context.createOscillator();
+        const cheerTwo = context.createOscillator();
+        const cheerThree = context.createOscillator();
+        const cheerOneGain = context.createGain();
+        const cheerTwoGain = context.createGain();
+        const cheerThreeGain = context.createGain();
+        const cueStart = now + 0.012;
+        const secondNoteStart = cueStart + 0.06;
+        const thirdNoteStart = cueStart + 0.12;
+
+        cheerOne.type = "triangle";
+        cheerTwo.type = "sine";
+        cheerThree.type = "sine";
+        cheerOne.frequency.setValueAtTime(659.25, cueStart);
+        cheerTwo.frequency.setValueAtTime(783.99, secondNoteStart);
+        cheerThree.frequency.setValueAtTime(1046.5, thirdNoteStart);
+
+        cheerOneGain.gain.setValueAtTime(0.0001, cueStart);
+        cheerOneGain.gain.exponentialRampToValueAtTime(0.115, cueStart + 0.004);
+        cheerOneGain.gain.exponentialRampToValueAtTime(0.0001, cueStart + 0.105);
+        cheerTwoGain.gain.setValueAtTime(0.0001, secondNoteStart);
+        cheerTwoGain.gain.exponentialRampToValueAtTime(0.1, secondNoteStart + 0.004);
+        cheerTwoGain.gain.exponentialRampToValueAtTime(0.0001, secondNoteStart + 0.13);
+        cheerThreeGain.gain.setValueAtTime(0.0001, thirdNoteStart);
+        cheerThreeGain.gain.exponentialRampToValueAtTime(0.09, thirdNoteStart + 0.004);
+        cheerThreeGain.gain.exponentialRampToValueAtTime(0.0001, thirdNoteStart + 0.18);
+
+        cheerOne.connect(cheerOneGain);
+        cheerTwo.connect(cheerTwoGain);
+        cheerThree.connect(cheerThreeGain);
+        cheerOneGain.connect(context.destination);
+        cheerTwoGain.connect(context.destination);
+        cheerThreeGain.connect(context.destination);
+
+        cheerOne.start(cueStart);
+        cheerTwo.start(secondNoteStart);
+        cheerThree.start(thirdNoteStart);
+        cheerOne.stop(cueStart + 0.115);
+        cheerTwo.stop(secondNoteStart + 0.14);
+        cheerThree.stop(thirdNoteStart + 0.19);
+      }
+    }
+
+    function playMinusSound(context, now) {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+
+      oscillator.type = "triangle";
+      oscillator.frequency.setValueAtTime(220, now);
+      oscillator.frequency.exponentialRampToValueAtTime(150, now + 0.09);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(now);
+      oscillator.stop(now + 0.13);
+    }
+
+    function playClearSound(context, now) {
+      const output = context.createGain();
+      const lowSweep = context.createOscillator();
+      const click = context.createOscillator();
+      const clickGain = context.createGain();
+
+      lowSweep.type = "square";
+      click.type = "triangle";
+      lowSweep.frequency.setValueAtTime(180, now);
+      lowSweep.frequency.exponentialRampToValueAtTime(80, now + 0.2);
+      click.frequency.setValueAtTime(520, now);
+      click.frequency.exponentialRampToValueAtTime(260, now + 0.045);
+
+      output.gain.setValueAtTime(0.0001, now);
+      output.gain.exponentialRampToValueAtTime(0.16, now + 0.012);
+      output.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+      clickGain.gain.setValueAtTime(0.14, now);
+      clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.055);
+
+      click.connect(clickGain);
+      lowSweep.connect(output);
+      clickGain.connect(output);
+      output.connect(context.destination);
+
+      lowSweep.start(now);
+      click.start(now);
+      lowSweep.stop(now + 0.23);
+      click.stop(now + 0.06);
+    }
+
+    function playSound(kind, score) {
+      const context = getAudioContext();
+      if (context.state === "suspended") context.resume();
+      const now = context.currentTime;
+
+      if (kind === "plus") {
+        playIncrementDing(context, now, score);
+      } else if (kind === "clear") {
+        playClearSound(context, now);
+      } else {
+        playMinusSound(context, now);
+      }
+    }
+
+    function showSkillCompletionFlash(skillName) {
+      window.clearTimeout(skillFlashTimer);
+      skillFlashSkill.textContent = skillName;
+      skillFlash.classList.remove("active");
+      void skillFlash.offsetWidth;
+      skillFlash.classList.add("active");
+      skillFlashTimer = window.setTimeout(() => skillFlash.classList.remove("active"), 470);
+    }
+
+    function showTodoCelebration() {
+      celebration.classList.remove("active");
+      void celebration.offsetWidth;
+      celebration.classList.add("active");
+      celebration.setAttribute("aria-hidden", "false");
+    }
+
+    function hideTodoCelebration() {
+      celebration.classList.remove("active");
+      celebration.setAttribute("aria-hidden", "true");
+    }
+
+    function getLeader(items, emptyText) {
+      if (!items.length) return emptyText;
+      const highScore = Math.max(...items.map((item) => item.score));
+      const leaders = items.filter((item) => item.score === highScore);
+      if (highScore === 0) return emptyText;
+      if (leaders.length > 1) return "tie: " + leaders.map((item) => item.name).join(", ");
+      return leaders[0].name + ": " + leaders[0].score;
+    }
+
+    function renderMode() {
+      modeButtons.forEach((button) => {
+        const active = button.dataset.mode === state.mode;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+
+      Object.keys(panels).forEach((mode) => {
+        panels[mode].classList.toggle("active", mode === state.mode);
+      });
+    }
+
+    function setMenuOpen(open) {
+      modeMenu.classList.toggle("open", open);
+      menuToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+
+    function renderSingle() {
+      countDisplay.textContent = state.single;
+    }
+
+    function getCounterCard(id) {
+      return Array.from(multipleList.children).find((card) => card.dataset.counterId === id);
+    }
+
+    function editCounterName(item, nameButton) {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "counter-name counter-name-input";
+      input.value = item.name;
+      input.autocomplete = "off";
+      input.maxLength = 80;
+      input.setAttribute("aria-label", "Edit name for " + item.name);
+
+      let settled = false;
+
+      const cancelEdit = () => {
+        if (settled) return;
+        settled = true;
+        input.replaceWith(nameButton);
+        nameButton.focus();
+        statusbar.textContent = "name change cancelled";
+      };
+
+      const saveEdit = () => {
+        if (settled) return;
+
+        const name = normalizeName(input.value);
+        if (!name) {
+          statusbar.textContent = "name cannot be blank";
+          window.requestAnimationFrame(() => input.focus());
+          return;
+        }
+
+        const duplicate = state.multiple.some((counter) => counter.id !== item.id && counter.name.toLowerCase() === name.toLowerCase());
+        if (duplicate) {
+          statusbar.textContent = name + " already exists";
+          window.requestAnimationFrame(() => {
+            input.focus();
+            input.select();
+          });
+          return;
+        }
+
+        settled = true;
+        const currentItem = state.multiple.find((counter) => counter.id === item.id);
+        if (!currentItem) {
+          renderMultiple();
+          return;
+        }
+
+        currentItem.name = name;
+        saveState();
+        renderMultiple();
+        statusbar.textContent = name + " renamed";
+
+        const updatedName = getCounterCard(item.id)?.querySelector(".counter-name");
+        if (updatedName) updatedName.focus();
+      };
+
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          saveEdit();
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          cancelEdit();
+        }
+      });
+      input.addEventListener("blur", saveEdit);
+
+      nameButton.replaceWith(input);
+      input.focus();
+      input.select();
+    }
+
+    function renderCounterList() {
+      multipleList.innerHTML = "";
+
+      if (!state.multiple.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "add a class, team, or person";
+        multipleList.appendChild(empty);
+        return;
+      }
+
+      state.multiple.forEach((item) => {
+        const card = document.createElement("article");
+        card.className = "counter-card";
+        card.dataset.counterId = item.id;
+
+        const name = document.createElement("button");
+        name.type = "button";
+        name.className = "counter-name";
+        name.textContent = item.name;
+        name.setAttribute("aria-label", "Edit " + item.name);
+        name.addEventListener("click", () => editCounterName(item, name));
+
+        const score = document.createElement("div");
+        score.className = "counter-score";
+        score.textContent = item.score;
+
+        const actions = document.createElement("div");
+        actions.className = "counter-actions wide";
+
+        const plus = document.createElement("button");
+        plus.type = "button";
+        plus.textContent = "+";
+        plus.setAttribute("aria-label", "Add point to " + item.name);
+        plus.addEventListener("click", () => changeMultipleScore(item.id, 1, card));
+
+        const minus = document.createElement("button");
+        minus.type = "button";
+        minus.textContent = "-";
+        minus.setAttribute("aria-label", "Subtract point from " + item.name);
+        minus.addEventListener("click", () => changeMultipleScore(item.id, -1, card));
+
+        actions.append(plus, minus);
+        card.append(name, score, actions);
+        multipleList.appendChild(card);
+      });
+    }
+
+    function renderMultiple() {
+      renderCounterList();
+      multipleLeader.textContent = getLeader(state.multiple, "multiple points");
+    }
+
+    function addListTableMessage(message) {
+      const row = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.colSpan = 3;
+      cell.className = "list-empty";
+      cell.textContent = message;
+      row.appendChild(cell);
+      listTableBody.appendChild(row);
+    }
+
+    function renderList() {
+      const list = getSelectedList();
+      const hasList = Boolean(list);
+      const hasSkills = Boolean(list?.skills.length);
+      const currentSkill = getCurrentSkill(list);
+      const stats = getListStats(list);
+      const isComplete = hasSkills && !currentSkill;
+
+      listSelector.innerHTML = "";
+      if (!state.lists.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "no TODOs yet";
+        listSelector.appendChild(option);
+      } else {
+        state.lists.forEach((item) => {
+          const option = document.createElement("option");
+          option.value = item.id;
+          option.textContent = item.name;
+          option.selected = item.id === state.selectedListId;
+          listSelector.appendChild(option);
+        });
+      }
+      listSelector.disabled = !hasList;
+      renameList.disabled = !hasList;
+      deleteList.disabled = !hasList;
+      addSkill.disabled = !hasList;
+      removeSkill.disabled = !hasSkills;
+      listPlus.disabled = !currentSkill;
+      listMinus.disabled = !currentSkill || currentSkill.completed === 0;
+      resetCurrentSkill.disabled = !currentSkill || currentSkill.completed === 0;
+      resetTodo.disabled = !hasSkills;
+
+      if (!hasList) {
+        listProgressText.textContent = "0% complete";
+        listCurrentSkill.textContent = "make a todo to start";
+        listCurrentCount.textContent = "—";
+        listCurrentTarget.textContent = "";
+      } else if (!hasSkills) {
+        listProgressText.textContent = "0% complete";
+        listCurrentSkill.textContent = "no skills yet";
+        listCurrentCount.textContent = "—";
+        listCurrentTarget.textContent = "";
+      } else if (isComplete) {
+        listProgressText.textContent = "100% complete";
+        listCurrentSkill.textContent = "todo complete!";
+        listCurrentCount.textContent = "";
+        listCurrentTarget.textContent = "";
+      } else {
+        listProgressText.textContent = stats.percentage + "% complete";
+        listCurrentSkill.textContent = currentSkill.name;
+        listCurrentCount.textContent = currentSkill.completed;
+        listCurrentTarget.textContent = "/" + currentSkill.reps;
+      }
+
+      listProgressFill.style.width = stats.percentage + "%";
+      listSuccess.classList.toggle("active", isComplete);
+      listSuccess.textContent = hasList ? list.name + " TODO complete! great work." : "TODO complete! great work.";
+
+      listTableBody.innerHTML = "";
+      if (!hasList) {
+        addListTableMessage("create a TODO to begin");
+        return;
+      }
+      if (!hasSkills) {
+        addListTableMessage("add the first skill for " + list.name);
+        return;
+      }
+
+      list.skills.forEach((skill) => {
+        const row = document.createElement("tr");
+        const isCurrent = currentSkill?.id === skill.id;
+        const isSkillComplete = skill.completed >= skill.reps;
+        row.classList.toggle("is-current", isCurrent);
+        row.classList.toggle("is-complete", isSkillComplete);
+
+        const name = document.createElement("td");
+        name.textContent = skill.name;
+        const reps = document.createElement("td");
+        reps.className = "skill-progress";
+        reps.textContent = skill.completed + " / " + skill.reps;
+        const status = document.createElement("td");
+        status.textContent = isSkillComplete ? "complete" : isCurrent ? "current" : "up next";
+
+        row.append(name, reps, status);
+        listTableBody.appendChild(row);
+      });
+    }
+
+    function render() {
+      renderMode();
+      renderSingle();
+      renderMultiple();
+      renderList();
+      saveState();
+    }
+
+    function setMode(mode) {
+      state.mode = mode;
+      setMenuOpen(false);
+      render();
+      statusbar.textContent = mode === "multiple" ? "multiple points" : mode === "list" ? "TODOs" : "single points";
+    }
+
+    function changeSingle(amount, kind) {
+      state.single += amount;
+      renderSingle();
+      saveState();
+      flash(countDisplay, kind);
+      playSound(kind, state.single);
+      statusbar.textContent = amount > 0 ? "point added" : "point removed";
+    }
+
+    function changeMultipleScore(id, amount, element) {
+      const item = state.multiple.find((counter) => counter.id === id);
+      if (!item) return;
+
+      item.score += amount;
+      saveState();
+      renderMultiple();
+      playSound(amount > 0 ? "plus" : "minus", item.score);
+      statusbar.textContent = item.name + (amount > 0 ? " +1" : " -1");
+
+      flash(getCounterCard(item.id) || element, amount > 0 ? "plus" : "minus");
+    }
+
+    function openCounterDialog(dialog) {
+      dialogFocus.set(dialog, document.activeElement);
+      if (!dialog.open) dialog.showModal();
+    }
+
+    function closeCounterDialog(dialog) {
+      if (dialog.open) dialog.close();
+    }
+
+    function restoreDialogFocus(dialog) {
+      const trigger = dialogFocus.get(dialog);
+      dialogFocus.delete(dialog);
+      if (trigger && document.contains(trigger)) trigger.focus();
+    }
+
+    function addMultipleCounter(rawName) {
+      const name = normalizeName(rawName);
+      if (!name) {
+        statusbar.textContent = "type a name first";
+        addCounterName.focus();
+        return false;
+      }
+
+      const exists = state.multiple.some((item) => item.name.toLowerCase() === name.toLowerCase());
+      if (exists) {
+        statusbar.textContent = name + " already exists";
+        addCounterName.focus();
+        addCounterName.select();
+        return false;
+      }
+
+      state.multiple.push({
+        id: makeId("group"),
+        name,
+        score: 0
+      });
+      saveState();
+      renderMultiple();
+      statusbar.textContent = name + " added";
+      return true;
+    }
+
+    function openAddDialog() {
+      addCounterName.value = "";
+      openCounterDialog(addDialog);
+      window.requestAnimationFrame(() => addCounterName.focus());
+    }
+
+    function renderRemoveOptions() {
+      removeOptions.innerHTML = "";
+
+      state.multiple.forEach((item) => {
+        const option = document.createElement("button");
+        const selected = item.id === selectedRemovalId;
+        option.type = "button";
+        option.className = "remove-option";
+        option.textContent = item.name + ": " + item.score;
+        option.setAttribute("aria-pressed", selected ? "true" : "false");
+        option.setAttribute("aria-label", "Select " + item.name + " with " + item.score + " points");
+        option.addEventListener("click", () => {
+          selectedRemovalId = item.id;
+          renderRemoveOptions();
+          const selectedOption = Array.from(removeOptions.children).find((button) => button.getAttribute("aria-pressed") === "true");
+          if (selectedOption) selectedOption.focus();
+        });
+        removeOptions.appendChild(option);
+      });
+
+      confirmRemove.disabled = !selectedRemovalId;
+    }
+
+    function openRemoveDialog() {
+      if (!state.multiple.length) {
+        statusbar.textContent = "no classes or teams to remove";
+        return;
+      }
+
+      selectedRemovalId = null;
+      renderRemoveOptions();
+      openCounterDialog(removeDialog);
+    }
+
+    function removeSelectedCounter() {
+      const item = state.multiple.find((counter) => counter.id === selectedRemovalId);
+      if (!item) {
+        statusbar.textContent = "choose a class or team first";
+        renderRemoveOptions();
+        return;
+      }
+
+      state.multiple = state.multiple.filter((counter) => counter.id !== item.id);
+      selectedRemovalId = null;
+      saveState();
+      renderMultiple();
+      closeCounterDialog(removeDialog);
+      statusbar.textContent = item.name + " removed";
+    }
+
+    function resetMultipleCounters() {
+      state.multiple.forEach((item) => {
+        item.score = 0;
+      });
+      saveState();
+      renderMultiple();
+      playSound("clear");
+      statusbar.textContent = "multiple points reset";
+    }
+
+    function openNewListDialog() {
+      newListName.value = "";
+      openCounterDialog(newListDialog);
+      window.requestAnimationFrame(() => newListName.focus());
+    }
+
+    function createList(rawName) {
+      const name = normalizeName(rawName);
+      if (!name) {
+        statusbar.textContent = "type a TODO name first";
+        newListName.focus();
+        return false;
+      }
+      if (state.lists.some((list) => list.name.toLowerCase() === name.toLowerCase())) {
+        statusbar.textContent = name + " TODO already exists";
+        newListName.focus();
+        newListName.select();
+        return false;
+      }
+
+      const list = { id: makeId("list"), name, skills: [] };
+      state.lists.push(list);
+      state.selectedListId = list.id;
+      saveState();
+      renderList();
+      statusbar.textContent = name + " TODO created";
+      return true;
+    }
+
+    function openRenameListDialog() {
+      const list = getSelectedList();
+      if (!list) return;
+      renameListName.value = list.name;
+      openCounterDialog(renameListDialog);
+      window.requestAnimationFrame(() => {
+        renameListName.focus();
+        renameListName.select();
+      });
+    }
+
+    function renameSelectedList(rawName) {
+      const list = getSelectedList();
+      const name = normalizeName(rawName);
+      if (!list || !name) {
+        statusbar.textContent = "type a TODO name first";
+        renameListName.focus();
+        return false;
+      }
+      if (state.lists.some((item) => item.id !== list.id && item.name.toLowerCase() === name.toLowerCase())) {
+        statusbar.textContent = name + " TODO already exists";
+        renameListName.focus();
+        renameListName.select();
+        return false;
+      }
+
+      list.name = name;
+      saveState();
+      renderList();
+      statusbar.textContent = name + " TODO renamed";
+      return true;
+    }
+
+    function openDeleteListDialog() {
+      const list = getSelectedList();
+      if (!list) return;
+      deleteListDescription.textContent = "this removes " + list.name + ", every skill, and its progress.";
+      openCounterDialog(deleteListDialog);
+    }
+
+    function deleteSelectedList() {
+      const list = getSelectedList();
+      if (!list) return;
+
+      state.lists = state.lists.filter((item) => item.id !== list.id);
+      state.selectedListId = state.lists[0]?.id || null;
+      saveState();
+      renderList();
+      closeCounterDialog(deleteListDialog);
+      statusbar.textContent = list.name + " TODO deleted";
+    }
+
+    function openAddSkillDialog() {
+      if (!getSelectedList()) {
+        statusbar.textContent = "make a TODO first";
+        return;
+      }
+      addSkillName.value = "";
+      addSkillReps.value = "1";
+      openCounterDialog(addSkillDialog);
+      window.requestAnimationFrame(() => addSkillName.focus());
+    }
+
+    function addSkillToList(rawName, rawReps) {
+      const list = getSelectedList();
+      const name = normalizeName(rawName);
+      const reps = Number(rawReps);
+      if (!list || !name) {
+        statusbar.textContent = "type a skill name first";
+        addSkillName.focus();
+        return false;
+      }
+      if (!Number.isInteger(reps) || reps < 1 || reps > 999) {
+        statusbar.textContent = "reps must be a whole number from 1 to 999";
+        addSkillReps.focus();
+        addSkillReps.select();
+        return false;
+      }
+      if (list.skills.some((skill) => skill.name.toLowerCase() === name.toLowerCase())) {
+        statusbar.textContent = name + " already exists in this TODO";
+        addSkillName.focus();
+        addSkillName.select();
+        return false;
+      }
+
+      list.skills.push({ id: makeId("skill"), name, reps, completed: 0 });
+      saveState();
+      renderList();
+      statusbar.textContent = name + " added";
+      return true;
+    }
+
+    function changeCurrentSkill(amount) {
+      const list = getSelectedList();
+      const skill = getCurrentSkill(list);
+      if (!list || !skill) {
+        statusbar.textContent = list?.skills.length ? "TODO already complete" : "add a skill first";
+        return;
+      }
+
+      const skillWasComplete = skill.completed >= skill.reps;
+      const todoWasComplete = !getCurrentSkill(list);
+      skill.completed = Math.max(0, Math.min(skill.reps, skill.completed + amount));
+      saveState();
+      renderList();
+      playSound(amount > 0 ? "plus" : "minus", skill.completed);
+
+      const skillIsComplete = skill.completed >= skill.reps;
+      const todoIsComplete = !getCurrentSkill(list);
+      if (amount > 0 && !skillWasComplete && skillIsComplete) {
+        showSkillCompletionFlash(skill.name);
+      }
+      if (amount > 0 && !todoWasComplete && todoIsComplete) {
+        window.setTimeout(() => {
+          const completedList = state.lists.find((item) => item.id === list.id);
+          if (completedList && !getCurrentSkill(completedList)) {
+            completedList.skills.forEach((item) => {
+              item.completed = 0;
+            });
+            saveState();
+            renderList();
+          }
+          showTodoCelebration();
+          statusbar.textContent = list.name + " TODO complete! reset and ready to go.";
+        }, 520);
+      } else {
+        statusbar.textContent = skill.name + (amount > 0 ? " +1" : " -1");
+      }
+    }
+
+    function resetCurrentSkillProgress() {
+      const list = getSelectedList();
+      const skill = getCurrentSkill(list);
+      if (!skill) return;
+
+      skill.completed = 0;
+      saveState();
+      renderList();
+      playSound("clear");
+      statusbar.textContent = skill.name + " reset; other skill progress is unchanged";
+    }
+
+    function resetEntireTodo() {
+      const list = getSelectedList();
+      if (!list?.skills.length) return;
+
+      list.skills.forEach((skill) => {
+        skill.completed = 0;
+      });
+      hideTodoCelebration();
+      saveState();
+      renderList();
+      playSound("clear");
+      statusbar.textContent = list.name + " reset";
+    }
+
+    function renderRemoveSkillOptions() {
+      const list = getSelectedList();
+      removeSkillOptions.innerHTML = "";
+      if (!list) return;
+
+      list.skills.forEach((skill) => {
+        const option = document.createElement("button");
+        const selected = skill.id === selectedSkillRemovalId;
+        option.type = "button";
+        option.className = "remove-option";
+        option.textContent = skill.name + ": " + skill.completed + " / " + skill.reps;
+        option.setAttribute("aria-pressed", selected ? "true" : "false");
+        option.setAttribute("aria-label", "Select " + skill.name + " to remove");
+        option.addEventListener("click", () => {
+          selectedSkillRemovalId = skill.id;
+          renderRemoveSkillOptions();
+          const selectedOption = Array.from(removeSkillOptions.children).find((button) => button.getAttribute("aria-pressed") === "true");
+          if (selectedOption) selectedOption.focus();
+        });
+        removeSkillOptions.appendChild(option);
+      });
+
+      confirmRemoveSkill.disabled = !selectedSkillRemovalId;
+    }
+
+    function openRemoveSkillDialog() {
+      const list = getSelectedList();
+      if (!list?.skills.length) {
+        statusbar.textContent = "no skills to remove";
+        return;
+      }
+      selectedSkillRemovalId = null;
+      renderRemoveSkillOptions();
+      openCounterDialog(removeSkillDialog);
+    }
+
+    function removeSelectedSkill() {
+      const list = getSelectedList();
+      const skill = list?.skills.find((item) => item.id === selectedSkillRemovalId);
+      if (!list || !skill) {
+        statusbar.textContent = "choose a skill first";
+        renderRemoveSkillOptions();
+        return;
+      }
+
+      list.skills = list.skills.filter((item) => item.id !== skill.id);
+      selectedSkillRemovalId = null;
+      saveState();
+      renderList();
+      closeCounterDialog(removeSkillDialog);
+      statusbar.textContent = skill.name + " removed";
+    }
+
+    menuToggle.addEventListener("click", () => {
+      setMenuOpen(!modeMenu.classList.contains("open"));
+    });
+
+    modeButtons.forEach((button) => {
+      button.addEventListener("click", () => setMode(button.dataset.mode));
+    });
+
+    plusButton.addEventListener("click", () => changeSingle(1, "plus"));
+    minusButton.addEventListener("click", () => changeSingle(-1, "minus"));
+
+    clearButton.addEventListener("click", () => {
+      state.single = 0;
+      renderSingle();
+      saveState();
+      flash(countDisplay, "minus");
+      playSound("clear");
+      statusbar.textContent = "counter cleared";
+    });
+
+    resetMultiple.addEventListener("click", resetMultipleCounters);
+    addMultiple.addEventListener("click", openAddDialog);
+    removeMultiple.addEventListener("click", openRemoveDialog);
+
+    listSelector.addEventListener("change", () => {
+      if (!state.lists.some((list) => list.id === listSelector.value)) return;
+      state.selectedListId = listSelector.value;
+      saveState();
+      renderList();
+      statusbar.textContent = getSelectedList().name + " selected";
+    });
+    newList.addEventListener("click", openNewListDialog);
+    renameList.addEventListener("click", openRenameListDialog);
+    deleteList.addEventListener("click", openDeleteListDialog);
+    addSkill.addEventListener("click", openAddSkillDialog);
+    removeSkill.addEventListener("click", openRemoveSkillDialog);
+    listPlus.addEventListener("click", () => changeCurrentSkill(1));
+    listMinus.addEventListener("click", () => changeCurrentSkill(-1));
+    resetCurrentSkill.addEventListener("click", resetCurrentSkillProgress);
+    resetTodo.addEventListener("click", resetEntireTodo);
+    closeCelebration.addEventListener("click", hideTodoCelebration);
+
+    addCounterForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (addMultipleCounter(addCounterName.value)) closeCounterDialog(addDialog);
+    });
+    cancelAdd.addEventListener("click", () => closeCounterDialog(addDialog));
+
+    removeCounterForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      removeSelectedCounter();
+    });
+    cancelRemove.addEventListener("click", () => closeCounterDialog(removeDialog));
+
+    newListForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (createList(newListName.value)) closeCounterDialog(newListDialog);
+    });
+    cancelNewList.addEventListener("click", () => closeCounterDialog(newListDialog));
+
+    renameListForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (renameSelectedList(renameListName.value)) closeCounterDialog(renameListDialog);
+    });
+    cancelRenameList.addEventListener("click", () => closeCounterDialog(renameListDialog));
+
+    deleteListForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      deleteSelectedList();
+    });
+    cancelDeleteList.addEventListener("click", () => closeCounterDialog(deleteListDialog));
+
+    addSkillForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (addSkillToList(addSkillName.value, addSkillReps.value)) closeCounterDialog(addSkillDialog);
+    });
+    cancelAddSkill.addEventListener("click", () => closeCounterDialog(addSkillDialog));
+
+    removeSkillForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      removeSelectedSkill();
+    });
+    cancelRemoveSkill.addEventListener("click", () => closeCounterDialog(removeSkillDialog));
+
+    [addDialog, removeDialog, newListDialog, renameListDialog, deleteListDialog, addSkillDialog, removeSkillDialog].forEach((dialog) => {
+      dialog.addEventListener("close", () => restoreDialogFocus(dialog));
+    });
+
+    loadState();
+    render();
+  </script>
+</body>
+</html>
