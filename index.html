@@ -526,7 +526,7 @@
 
     .list-table {
       width: 100%;
-      min-width: 440px;
+      min-width: 620px;
       border-collapse: collapse;
       background: var(--green);
       font-size: clamp(20px, 5vw, 30px);
@@ -561,6 +561,34 @@
     .list-table .skill-progress {
       white-space: nowrap;
       text-align: center;
+    }
+
+    .list-table .skill-editable {
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .list-table .skill-editable:focus {
+      outline: 3px solid var(--black);
+      outline-offset: -5px;
+    }
+
+    .list-table .is-hidden td {
+      color: #315039;
+      background: #b7cda7;
+    }
+
+    .skill-edit-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      min-width: 190px;
+    }
+
+    .skill-edit-actions button {
+      min-height: 35px;
+      padding: 4px 7px;
+      font-size: 15px;
     }
 
     .list-actions {
@@ -955,7 +983,7 @@
         <div class="list-table-wrap">
           <table class="list-table">
             <thead>
-              <tr><th scope="col">skill</th><th scope="col">reps</th><th scope="col">status</th></tr>
+              <tr><th scope="col">skill</th><th scope="col">reps</th><th scope="col">status</th><th scope="col">actions</th></tr>
             </thead>
             <tbody id="listTableBody"></tbody>
           </table>
@@ -1068,6 +1096,20 @@
     </form>
   </dialog>
 
+  <dialog id="editSkillDialog" class="counter-dialog" aria-labelledby="editSkillDialogTitle">
+    <form id="editSkillForm" class="dialog-content">
+      <h2 id="editSkillDialogTitle" class="dialog-title">edit skill</h2>
+      <label class="dialog-label" for="editSkillName">skill name</label>
+      <input id="editSkillName" autocomplete="off" maxlength="80">
+      <label class="dialog-label" for="editSkillReps">goal number</label>
+      <input id="editSkillReps" type="number" inputmode="numeric" min="1" max="999" step="1">
+      <div class="dialog-actions">
+        <button id="cancelEditSkill" type="button">cancel</button>
+        <button type="submit">save</button>
+      </div>
+    </form>
+  </dialog>
+
   <div id="skillFlash" class="skill-flash" role="status" aria-live="polite" aria-atomic="true">
     <div class="skill-flash-copy">
       <div class="skill-flash-status">SKILL CLEARED</div>
@@ -1168,6 +1210,11 @@
     const removeSkillOptions = document.getElementById("removeSkillOptions");
     const confirmRemoveSkill = document.getElementById("confirmRemoveSkill");
     const cancelRemoveSkill = document.getElementById("cancelRemoveSkill");
+    const editSkillDialog = document.getElementById("editSkillDialog");
+    const editSkillForm = document.getElementById("editSkillForm");
+    const editSkillName = document.getElementById("editSkillName");
+    const editSkillReps = document.getElementById("editSkillReps");
+    const cancelEditSkill = document.getElementById("cancelEditSkill");
     const skillFlash = document.getElementById("skillFlash");
     const skillFlashSkill = document.getElementById("skillFlashSkill");
     const celebration = document.getElementById("celebration");
@@ -1185,6 +1232,7 @@
     let audioContext = null;
     let selectedRemovalId = null;
     let selectedSkillRemovalId = null;
+    let selectedSkillEditId = null;
     let skillFlashTimer = null;
     const dialogFocus = new WeakMap();
 
@@ -1241,7 +1289,8 @@
         id,
         name: makeUniqueName(skill.name, "skill " + (index + 1), usedNames),
         reps,
-        completed
+        completed,
+        hidden: skill.hidden === true
       };
     }
 
@@ -1277,11 +1326,11 @@
 
     function getCurrentSkill(list) {
       if (!list) return null;
-      return list.skills.find((skill) => skill.completed < skill.reps) || null;
+      return list.skills.find((skill) => !skill.hidden && skill.completed < skill.reps) || null;
     }
 
     function getListStats(list) {
-      const skills = list ? list.skills : [];
+      const skills = list ? list.skills.filter((skill) => !skill.hidden) : [];
       const totalReps = skills.reduce((sum, skill) => sum + skill.reps, 0);
       const completedReps = skills.reduce((sum, skill) => sum + skill.completed, 0);
       const percentage = totalReps ? Math.round((completedReps / totalReps) * 100) : 0;
@@ -1491,6 +1540,27 @@
       click.stop(now + 0.06);
     }
 
+    function playSkillGoalCelebration(context, now) {
+      [
+        [659.25, 0],
+        [783.99, 0.06],
+        [1046.5, 0.12]
+      ].forEach(([frequency, offset]) => {
+        const start = now + offset;
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = "triangle";
+        oscillator.frequency.setValueAtTime(frequency, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.13, start + 0.006);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.16);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start(start);
+        oscillator.stop(start + 0.17);
+      });
+    }
+
     function playSound(kind, score) {
       const context = getAudioContext();
       if (context.state === "suspended") context.resume();
@@ -1498,6 +1568,8 @@
 
       if (kind === "plus") {
         playIncrementDing(context, now, score);
+      } else if (kind === "goal") {
+        playSkillGoalCelebration(context, now);
       } else if (kind === "clear") {
         playClearSound(context, now);
       } else {
@@ -1687,7 +1759,7 @@
     function addListTableMessage(message) {
       const row = document.createElement("tr");
       const cell = document.createElement("td");
-      cell.colSpan = 3;
+      cell.colSpan = 4;
       cell.className = "list-empty";
       cell.textContent = message;
       row.appendChild(cell);
@@ -1698,9 +1770,10 @@
       const list = getSelectedList();
       const hasList = Boolean(list);
       const hasSkills = Boolean(list?.skills.length);
+      const activeSkills = list ? list.skills.filter((skill) => !skill.hidden) : [];
       const currentSkill = getCurrentSkill(list);
       const stats = getListStats(list);
-      const isComplete = hasSkills && !currentSkill;
+      const isComplete = activeSkills.length > 0 && !currentSkill;
 
       listSelector.innerHTML = "";
       if (!state.lists.length) {
@@ -1737,6 +1810,11 @@
         listCurrentSkill.textContent = "no skills yet";
         listCurrentCount.textContent = "—";
         listCurrentTarget.textContent = "";
+      } else if (!activeSkills.length) {
+        listProgressText.textContent = "no active skills";
+        listCurrentSkill.textContent = "all skills hidden";
+        listCurrentCount.textContent = "—";
+        listCurrentTarget.textContent = "";
       } else if (isComplete) {
         listProgressText.textContent = "100% complete";
         listCurrentSkill.textContent = "todo complete!";
@@ -1767,20 +1845,169 @@
         const row = document.createElement("tr");
         const isCurrent = currentSkill?.id === skill.id;
         const isSkillComplete = skill.completed >= skill.reps;
+        const isHidden = skill.hidden === true;
         row.classList.toggle("is-current", isCurrent);
         row.classList.toggle("is-complete", isSkillComplete);
+        row.classList.toggle("is-hidden", isHidden);
 
         const name = document.createElement("td");
+        name.className = "skill-editable";
         name.textContent = skill.name;
-        const reps = document.createElement("td");
-        reps.className = "skill-progress";
-        reps.textContent = skill.completed + " / " + skill.reps;
-        const status = document.createElement("td");
-        status.textContent = isSkillComplete ? "complete" : isCurrent ? "current" : "up next";
+        name.tabIndex = 0;
+        name.setAttribute("role", "button");
+        name.setAttribute("aria-label", "Double-tap to edit " + skill.name);
+        name.title = "Double-tap to edit skill name";
+        bindSkillEditTrigger(name, () => openSkillEditDialog(skill.id, "name"));
 
-        row.append(name, reps, status);
+        const reps = document.createElement("td");
+        reps.className = "skill-progress skill-editable";
+        reps.textContent = skill.completed + " / " + skill.reps;
+        reps.tabIndex = 0;
+        reps.setAttribute("role", "button");
+        reps.setAttribute("aria-label", "Double-tap to edit goal number for " + skill.name);
+        reps.title = "Double-tap to edit goal number";
+        bindSkillEditTrigger(reps, () => openSkillEditDialog(skill.id, "reps"));
+
+        const status = document.createElement("td");
+        status.textContent = isHidden ? "hidden" : isSkillComplete ? "complete" : isCurrent ? "current" : "up next";
+
+        const actions = document.createElement("td");
+        actions.className = "skill-edit-actions";
+
+        const edit = document.createElement("button");
+        edit.type = "button";
+        edit.textContent = "edit";
+        edit.setAttribute("aria-label", "Edit " + skill.name);
+        edit.addEventListener("click", () => openSkillEditDialog(skill.id, "name"));
+
+        const hide = document.createElement("button");
+        hide.type = "button";
+        hide.textContent = isHidden ? "show" : "hide";
+        hide.setAttribute("aria-label", (isHidden ? "Show " : "Hide ") + skill.name + " in this TODO");
+        hide.addEventListener("click", () => toggleSkillHidden(skill.id));
+
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "remove-confirm";
+        remove.textContent = "delete";
+        remove.setAttribute("aria-label", "Delete " + skill.name);
+        remove.addEventListener("click", () => deleteSkillById(skill.id));
+
+        actions.append(edit, hide, remove);
+        row.append(name, reps, status, actions);
         listTableBody.appendChild(row);
       });
+    }
+
+    function getSkillById(skillId) {
+      const list = getSelectedList();
+      return list?.skills.find((skill) => skill.id === skillId) || null;
+    }
+
+    function bindSkillEditTrigger(element, callback) {
+      let lastTapAt = 0;
+      let lastTriggerAt = 0;
+
+      const trigger = (event) => {
+        const now = Date.now();
+        if (now - lastTriggerAt < 250) return;
+        lastTriggerAt = now;
+        if (event) event.preventDefault();
+        callback();
+      };
+
+      element.addEventListener("dblclick", trigger);
+      element.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") trigger(event);
+      });
+      element.addEventListener("pointerup", (event) => {
+        if (event.pointerType === "mouse") return;
+        const now = Date.now();
+        if (now - lastTapAt <= 360) {
+          lastTapAt = 0;
+          trigger(event);
+          return;
+        }
+        lastTapAt = now;
+      });
+    }
+
+    function openSkillEditDialog(skillId, field = "name") {
+      const skill = getSkillById(skillId);
+      if (!skill) {
+        statusbar.textContent = "skill not found";
+        return;
+      }
+
+      selectedSkillEditId = skill.id;
+      editSkillName.value = skill.name;
+      editSkillReps.value = String(skill.reps);
+      openCounterDialog(editSkillDialog);
+      const input = field === "reps" ? editSkillReps : editSkillName;
+      input.focus();
+      input.select();
+    }
+
+    function saveEditedSkill() {
+      const list = getSelectedList();
+      const skill = getSkillById(selectedSkillEditId);
+      const name = normalizeName(editSkillName.value);
+      const reps = Number(editSkillReps.value);
+
+      if (!list || !skill) {
+        statusbar.textContent = "skill not found";
+        return false;
+      }
+      if (!name) {
+        statusbar.textContent = "skill name cannot be blank";
+        editSkillName.focus();
+        return false;
+      }
+      if (!Number.isInteger(reps) || reps < 1 || reps > 999) {
+        statusbar.textContent = "goal must be a whole number from 1 to 999";
+        editSkillReps.focus();
+        editSkillReps.select();
+        return false;
+      }
+      if (list.skills.some((item) => item.id !== skill.id && item.name.toLowerCase() === name.toLowerCase())) {
+        statusbar.textContent = name + " already exists in this TODO";
+        editSkillName.focus();
+        editSkillName.select();
+        return false;
+      }
+
+      skill.name = name;
+      skill.reps = reps;
+      skill.completed = Math.min(skill.completed, reps);
+      saveState();
+      renderList();
+      statusbar.textContent = name + " updated";
+      return true;
+    }
+
+    function toggleSkillHidden(skillId) {
+      const skill = getSkillById(skillId);
+      if (!skill) return;
+      skill.hidden = !skill.hidden;
+      saveState();
+      renderList();
+      statusbar.textContent = skill.name + (skill.hidden ? " hidden from this TODO" : " returned to this TODO");
+    }
+
+    function deleteSkillById(skillId) {
+      const list = getSelectedList();
+      const skill = getSkillById(skillId);
+      if (!list || !skill) return;
+      if (!window.confirm("Delete " + skill.name + "?")) return;
+
+      list.skills = list.skills.filter((item) => item.id !== skill.id);
+      if (selectedSkillEditId === skill.id) {
+        selectedSkillEditId = null;
+        closeCounterDialog(editSkillDialog);
+      }
+      saveState();
+      renderList();
+      statusbar.textContent = skill.name + " deleted";
     }
 
     function render() {
@@ -2042,7 +2269,7 @@
         return false;
       }
 
-      list.skills.push({ id: makeId("skill"), name, reps, completed: 0 });
+      list.skills.push({ id: makeId("skill"), name, reps, completed: 0, hidden: false });
       saveState();
       renderList();
       statusbar.textContent = name + " added";
@@ -2053,7 +2280,8 @@
       const list = getSelectedList();
       const skill = getCurrentSkill(list);
       if (!list || !skill) {
-        statusbar.textContent = list?.skills.length ? "TODO already complete" : "add a skill first";
+        const activeSkills = list ? list.skills.filter((item) => !item.hidden) : [];
+        statusbar.textContent = !list ? "add a skill first" : !list.skills.length ? "add a skill first" : activeSkills.length ? "TODO already complete" : "no active skills";
         return;
       }
 
@@ -2062,12 +2290,14 @@
       skill.completed = Math.max(0, Math.min(skill.reps, skill.completed + amount));
       saveState();
       renderList();
-      playSound(amount > 0 ? "plus" : "minus", skill.completed);
 
       const skillIsComplete = skill.completed >= skill.reps;
       const todoIsComplete = !getCurrentSkill(list);
       if (amount > 0 && !skillWasComplete && skillIsComplete) {
         showSkillCompletionFlash(skill.name);
+        playSound("goal");
+      } else {
+        playSound(amount > 0 ? "plus" : "minus", skill.completed);
       }
       if (amount > 0 && !todoWasComplete && todoIsComplete) {
         window.setTimeout(() => {
@@ -2250,8 +2480,17 @@
     });
     cancelRemoveSkill.addEventListener("click", () => closeCounterDialog(removeSkillDialog));
 
-    [addDialog, removeDialog, newListDialog, renameListDialog, deleteListDialog, addSkillDialog, removeSkillDialog].forEach((dialog) => {
+    editSkillForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (saveEditedSkill()) closeCounterDialog(editSkillDialog);
+    });
+    cancelEditSkill.addEventListener("click", () => closeCounterDialog(editSkillDialog));
+
+    [addDialog, removeDialog, newListDialog, renameListDialog, deleteListDialog, addSkillDialog, removeSkillDialog, editSkillDialog].forEach((dialog) => {
       dialog.addEventListener("close", () => restoreDialogFocus(dialog));
+    });
+    editSkillDialog.addEventListener("close", () => {
+      selectedSkillEditId = null;
     });
 
     loadState();
