@@ -64,7 +64,9 @@
     }
 
     button,
-    input {
+    input,
+    select,
+    textarea {
       font-family: var(--brat-font);
     }
 
@@ -108,6 +110,21 @@
       border-radius: 0;
       font-size: 28px;
       font-weight: 500;
+      outline: none;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 190px;
+      padding: 10px;
+      resize: vertical;
+      color: var(--black);
+      background: var(--green);
+      border: 4px solid var(--black);
+      border-radius: 0;
+      font-size: 24px;
+      font-weight: 500;
+      line-height: 1.15;
       outline: none;
     }
 
@@ -378,6 +395,46 @@
       gap: 8px;
     }
 
+    .class-roster-panel {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 4px solid var(--black);
+    }
+
+    .class-roster-title {
+      font-size: clamp(24px, 7vw, 38px);
+      font-weight: 500;
+      line-height: 0.95;
+      text-transform: lowercase;
+    }
+
+    .class-roster-actions {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .class-roster-actions button {
+      min-height: 58px;
+      padding: 7px 9px;
+      font-size: clamp(18px, 4vw, 24px);
+      text-transform: lowercase;
+    }
+
+    .class-roster-actions .delete-class {
+      color: var(--green);
+      background: var(--black);
+      font-size: 34px;
+    }
+
+    .class-roster-note {
+      font-size: 17px;
+      font-weight: 500;
+      line-height: 1.05;
+      text-transform: lowercase;
+    }
+
     .list-select {
       min-height: 60px;
       min-width: 0;
@@ -589,6 +646,12 @@
       min-height: 35px;
       padding: 4px 7px;
       font-size: 15px;
+    }
+
+    .skill-edit-actions .skill-delete {
+      min-width: 38px;
+      font-size: 24px;
+      line-height: 1;
     }
 
     .list-actions {
@@ -900,6 +963,10 @@
         grid-template-columns: 1fr;
       }
 
+      .class-roster-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
       .display {
         min-height: 210px;
       }
@@ -948,6 +1015,17 @@
 
       <section id="multiplePanel" class="panel" aria-label="Multiple point counters">
         <div id="multipleLeader" class="display label-display" aria-live="polite">multiple points</div>
+        <div class="class-roster-panel" aria-label="Saved class rosters">
+          <div class="class-roster-title">saved classes</div>
+          <select id="classSelector" class="list-select" aria-label="Choose a saved class"></select>
+          <div class="class-roster-actions">
+            <button id="loadClass" type="button">load</button>
+            <button id="newClass" type="button">new</button>
+            <button id="editClass" type="button">edit</button>
+            <button id="deleteClass" class="delete-class" type="button" aria-label="Delete selected class">×</button>
+          </div>
+          <div class="class-roster-note">save each class once, then load every student's name with scores reset to zero.</div>
+        </div>
         <div id="multipleList" class="counter-list"></div>
         <div class="controls">
           <button id="resetMultiple" class="clear" type="button">reset multiple</button>
@@ -1031,6 +1109,20 @@
       <div class="dialog-actions">
         <button id="cancelRemove" type="button">cancel</button>
         <button id="confirmRemove" class="remove-confirm" type="submit" disabled>remove selected</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="classDialog" class="counter-dialog" aria-labelledby="classDialogTitle">
+    <form id="classForm" class="dialog-content">
+      <h2 id="classDialogTitle" class="dialog-title">new class</h2>
+      <label class="dialog-label" for="className">class name</label>
+      <input id="className" autocomplete="off" maxlength="80" placeholder="for example: monday level 3">
+      <label class="dialog-label" for="classStudents">student names — one per line</label>
+      <textarea id="classStudents" maxlength="5000" placeholder="Avery&#10;Jordan&#10;Morgan"></textarea>
+      <div class="dialog-actions">
+        <button id="cancelClass" type="button">cancel</button>
+        <button type="submit">save</button>
       </div>
     </form>
   </dialog>
@@ -1124,9 +1216,10 @@
   </div>
 
   <script>
-    const STORAGE_KEY = "custom-points-counter-state-v4";
-    const PREVIOUS_STORAGE_KEY = "custom-points-counter-state-v3";
-    const OLDER_STORAGE_KEY = "custom-points-counter-state-v2";
+    const STORAGE_KEY = "custom-points-counter-state-v5";
+    const PREVIOUS_STORAGE_KEY = "custom-points-counter-state-v4";
+    const OLDER_STORAGE_KEY = "custom-points-counter-state-v3";
+    const OLDEST_STORAGE_KEY = "custom-points-counter-state-v2";
     const LEGACY_SINGLE_KEY = "custom-points-counter-value-v1";
     const DEFAULT_LIST_SEED_VERSION = 2;
     const PREVIOUS_TODO_ID = "l3-floor-form-2026-07-13";
@@ -1171,6 +1264,17 @@
     const removeOptions = document.getElementById("removeOptions");
     const confirmRemove = document.getElementById("confirmRemove");
     const cancelRemove = document.getElementById("cancelRemove");
+    const classSelector = document.getElementById("classSelector");
+    const loadClass = document.getElementById("loadClass");
+    const newClass = document.getElementById("newClass");
+    const editClass = document.getElementById("editClass");
+    const deleteClass = document.getElementById("deleteClass");
+    const classDialog = document.getElementById("classDialog");
+    const classForm = document.getElementById("classForm");
+    const classDialogTitle = document.getElementById("classDialogTitle");
+    const className = document.getElementById("className");
+    const classStudents = document.getElementById("classStudents");
+    const cancelClass = document.getElementById("cancelClass");
     const listSelector = document.getElementById("listSelector");
     const newList = document.getElementById("newList");
     const renameList = document.getElementById("renameList");
@@ -1225,12 +1329,15 @@
       mode: "single",
       single: 0,
       multiple: [],
+      classes: [],
+      selectedClassId: null,
       lists: [],
       selectedListId: null,
       listSeedVersion: 0
     };
     let audioContext = null;
     let selectedRemovalId = null;
+    let selectedClassEditId = null;
     let selectedSkillRemovalId = null;
     let selectedSkillEditId = null;
     let skillFlashTimer = null;
@@ -1272,6 +1379,30 @@
           id,
           name: makeUniqueName(rawCounter.name, prefix + " " + (index + 1), usedNames),
           score: Number.isFinite(Number(rawCounter.score)) ? Number(rawCounter.score) : 0
+        };
+      });
+    }
+
+    function normalizeClasses(classes) {
+      if (!Array.isArray(classes)) return [];
+
+      const usedIds = new Set();
+      const usedNames = new Set();
+
+      return classes.map((rawClass, index) => {
+        const savedClass = rawClass && typeof rawClass === "object" ? rawClass : {};
+        let id = String(savedClass.id || makeId("class"));
+        while (usedIds.has(id)) id = makeId("class");
+        usedIds.add(id);
+
+        const studentNames = new Set();
+        const students = (Array.isArray(savedClass.students) ? savedClass.students : [])
+          .map((student, studentIndex) => makeUniqueName(student, "student " + (studentIndex + 1), studentNames));
+
+        return {
+          id,
+          name: makeUniqueName(savedClass.name, "class " + (index + 1), usedNames),
+          students
         };
       });
     }
@@ -1324,6 +1455,10 @@
       return state.lists.find((list) => list.id === state.selectedListId) || null;
     }
 
+    function getSelectedClass() {
+      return state.classes.find((savedClass) => savedClass.id === state.selectedClassId) || null;
+    }
+
     function getCurrentSkill(list) {
       if (!list) return null;
       return list.skills.find((skill) => !skill.hidden && skill.completed < skill.reps) || null;
@@ -1342,7 +1477,7 @@
       let hasSavedState = false;
 
       try {
-        const savedState = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(PREVIOUS_STORAGE_KEY) || localStorage.getItem(OLDER_STORAGE_KEY);
+        const savedState = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(PREVIOUS_STORAGE_KEY) || localStorage.getItem(OLDER_STORAGE_KEY) || localStorage.getItem(OLDEST_STORAGE_KEY);
         hasSavedState = Boolean(savedState);
         const saved = JSON.parse(savedState || "{}");
 
@@ -1359,6 +1494,11 @@
             state.multiple = normalizeCounters(oldCounters, "group");
           }
 
+          state.classes = normalizeClasses(saved.classes);
+          state.selectedClassId = state.classes.some((savedClass) => savedClass.id === saved.selectedClassId)
+            ? saved.selectedClassId
+            : state.classes[0]?.id || null;
+
           state.lists = normalizeLists(saved.lists);
           state.selectedListId = state.lists.some((list) => list.id === saved.selectedListId)
             ? saved.selectedListId
@@ -1371,6 +1511,8 @@
       } catch (error) {
         state.mode = "single";
         state.multiple = [];
+        state.classes = [];
+        state.selectedClassId = null;
         state.lists = [];
         state.selectedListId = null;
         state.listSeedVersion = 0;
@@ -1751,7 +1893,152 @@
       });
     }
 
+    function renderClassRosterControls() {
+      const selectedClass = getSelectedClass();
+      classSelector.innerHTML = "";
+
+      if (!state.classes.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "no saved classes yet";
+        classSelector.appendChild(option);
+      } else {
+        state.classes.forEach((savedClass) => {
+          const option = document.createElement("option");
+          option.value = savedClass.id;
+          option.textContent = savedClass.name + " (" + savedClass.students.length + ")";
+          option.selected = savedClass.id === state.selectedClassId;
+          classSelector.appendChild(option);
+        });
+      }
+
+      classSelector.disabled = !state.classes.length;
+      loadClass.disabled = !selectedClass;
+      editClass.disabled = !selectedClass;
+      deleteClass.disabled = !selectedClass;
+    }
+
+    function parseStudentNames(value) {
+      return String(value || "")
+        .split(/\r?\n/)
+        .map(normalizeName)
+        .filter(Boolean);
+    }
+
+    function openNewClassDialog() {
+      selectedClassEditId = null;
+      classDialogTitle.textContent = "new class";
+      className.value = "";
+      classStudents.value = state.multiple.map((item) => item.name).join("\n");
+      openCounterDialog(classDialog);
+      window.requestAnimationFrame(() => className.focus());
+    }
+
+    function openEditClassDialog() {
+      const savedClass = getSelectedClass();
+      if (!savedClass) {
+        statusbar.textContent = "choose a saved class first";
+        return;
+      }
+
+      selectedClassEditId = savedClass.id;
+      classDialogTitle.textContent = "edit class";
+      className.value = savedClass.name;
+      classStudents.value = savedClass.students.join("\n");
+      openCounterDialog(classDialog);
+      window.requestAnimationFrame(() => {
+        className.focus();
+        className.select();
+      });
+    }
+
+    function saveClassRoster() {
+      const name = normalizeName(className.value);
+      const students = parseStudentNames(classStudents.value);
+
+      if (!name) {
+        statusbar.textContent = "type a class name first";
+        className.focus();
+        return false;
+      }
+      if (state.classes.some((savedClass) => savedClass.id !== selectedClassEditId && savedClass.name.toLowerCase() === name.toLowerCase())) {
+        statusbar.textContent = name + " already exists";
+        className.focus();
+        className.select();
+        return false;
+      }
+      if (!students.length) {
+        statusbar.textContent = "add at least one student";
+        classStudents.focus();
+        return false;
+      }
+      const longName = students.find((student) => student.length > 80);
+      if (longName) {
+        statusbar.textContent = "student names must be 80 characters or fewer";
+        classStudents.focus();
+        return false;
+      }
+      const seenStudents = new Set();
+      const duplicateStudent = students.find((student) => {
+        const key = student.toLowerCase();
+        if (seenStudents.has(key)) return true;
+        seenStudents.add(key);
+        return false;
+      });
+      if (duplicateStudent) {
+        statusbar.textContent = duplicateStudent + " is listed more than once";
+        classStudents.focus();
+        return false;
+      }
+
+      const existingClass = state.classes.find((savedClass) => savedClass.id === selectedClassEditId);
+      if (existingClass) {
+        existingClass.name = name;
+        existingClass.students = students;
+        state.selectedClassId = existingClass.id;
+      } else {
+        const savedClass = { id: makeId("class"), name, students };
+        state.classes.push(savedClass);
+        state.selectedClassId = savedClass.id;
+      }
+
+      saveState();
+      renderMultiple();
+      statusbar.textContent = name + " saved with " + students.length + " students";
+      return true;
+    }
+
+    function loadSelectedClass() {
+      const savedClass = getSelectedClass();
+      if (!savedClass) {
+        statusbar.textContent = "choose a saved class first";
+        return;
+      }
+      if (state.multiple.some((item) => item.score !== 0) && !window.confirm("Load " + savedClass.name + " and reset the current scores?")) return;
+
+      state.multiple = normalizeCounters(
+        savedClass.students.map((name) => ({ name, score: 0 })),
+        "student"
+      );
+      saveState();
+      renderMultiple();
+      statusbar.textContent = savedClass.name + " loaded with fresh scores";
+    }
+
+    function deleteSelectedClass() {
+      const savedClass = getSelectedClass();
+      if (!savedClass) return;
+      if (!window.confirm("Delete saved class " + savedClass.name + "?")) return;
+
+      state.classes = state.classes.filter((item) => item.id !== savedClass.id);
+      state.selectedClassId = state.classes[0]?.id || null;
+      saveState();
+      renderMultiple();
+      statusbar.textContent = savedClass.name + " deleted; current counters were not changed";
+    }
+
     function renderMultiple() {
+      renderClassRosterControls();
       renderCounterList();
       multipleLeader.textContent = getLeader(state.multiple, "multiple points");
     }
@@ -1888,8 +2175,8 @@
 
         const remove = document.createElement("button");
         remove.type = "button";
-        remove.className = "remove-confirm";
-        remove.textContent = "delete";
+        remove.className = "remove-confirm skill-delete";
+        remove.textContent = "×";
         remove.setAttribute("aria-label", "Delete " + skill.name);
         remove.addEventListener("click", () => deleteSkillById(skill.id));
 
@@ -2419,6 +2706,17 @@
     resetMultiple.addEventListener("click", resetMultipleCounters);
     addMultiple.addEventListener("click", openAddDialog);
     removeMultiple.addEventListener("click", openRemoveDialog);
+    classSelector.addEventListener("change", () => {
+      if (!state.classes.some((savedClass) => savedClass.id === classSelector.value)) return;
+      state.selectedClassId = classSelector.value;
+      saveState();
+      renderClassRosterControls();
+      statusbar.textContent = getSelectedClass().name + " selected";
+    });
+    loadClass.addEventListener("click", loadSelectedClass);
+    newClass.addEventListener("click", openNewClassDialog);
+    editClass.addEventListener("click", openEditClassDialog);
+    deleteClass.addEventListener("click", deleteSelectedClass);
 
     listSelector.addEventListener("change", () => {
       if (!state.lists.some((list) => list.id === listSelector.value)) return;
@@ -2449,6 +2747,12 @@
       removeSelectedCounter();
     });
     cancelRemove.addEventListener("click", () => closeCounterDialog(removeDialog));
+
+    classForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (saveClassRoster()) closeCounterDialog(classDialog);
+    });
+    cancelClass.addEventListener("click", () => closeCounterDialog(classDialog));
 
     newListForm.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -2486,8 +2790,11 @@
     });
     cancelEditSkill.addEventListener("click", () => closeCounterDialog(editSkillDialog));
 
-    [addDialog, removeDialog, newListDialog, renameListDialog, deleteListDialog, addSkillDialog, removeSkillDialog, editSkillDialog].forEach((dialog) => {
+    [addDialog, removeDialog, classDialog, newListDialog, renameListDialog, deleteListDialog, addSkillDialog, removeSkillDialog, editSkillDialog].forEach((dialog) => {
       dialog.addEventListener("close", () => restoreDialogFocus(dialog));
+    });
+    classDialog.addEventListener("close", () => {
+      selectedClassEditId = null;
     });
     editSkillDialog.addEventListener("close", () => {
       selectedSkillEditId = null;
