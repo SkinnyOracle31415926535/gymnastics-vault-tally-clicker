@@ -196,30 +196,12 @@
       display: grid;
     }
 
-    .mode-button,
-    .streak-button {
+    .mode-button {
       min-height: 54px;
       color: var(--black);
       background: var(--green);
       font-size: clamp(20px, 5vw, 30px);
       text-transform: lowercase;
-    }
-
-    .streak-button {
-      display: grid;
-      place-items: center;
-      padding: 8px 10px;
-      border: 4px solid var(--black);
-      font-family: var(--brat-font);
-      font-weight: 500;
-      text-decoration: none;
-      filter: blur(0.2px);
-      text-shadow: 0 0 1.5px rgba(5, 5, 5, 0.42);
-    }
-
-    .streak-button:active {
-      color: var(--green);
-      background: var(--black);
     }
 
     .mode-button.active {
@@ -945,6 +927,332 @@
       text-shadow: 0 0 1.6px rgba(5, 5, 5, 0.46);
     }
 
+    .streak-panel {
+      gap: 10px;
+    }
+
+    .streak-panel [hidden] {
+      display: none !important;
+    }
+
+    .streak-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px;
+      border: 4px solid var(--black);
+    }
+
+    .streak-title {
+      font-size: clamp(34px, 10vw, 62px);
+      font-weight: 500;
+      line-height: 0.9;
+      text-transform: lowercase;
+      filter: blur(0.38px);
+      text-shadow: 0 0 2.4px rgba(5, 5, 5, 0.55);
+    }
+
+    .streak-sound {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 18px;
+      font-weight: 500;
+      text-transform: lowercase;
+      filter: blur(0.2px);
+    }
+
+    .streak-sound input {
+      width: 24px;
+      height: 24px;
+      min-height: 24px;
+      padding: 0;
+      accent-color: var(--black);
+    }
+
+    .streak-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .streak-tabs button {
+      min-height: 54px;
+      padding: 7px 9px;
+      font-size: clamp(17px, 4vw, 24px);
+    }
+
+    .streak-tabs button.active {
+      color: var(--green);
+      background: var(--black);
+    }
+
+    .streak-view {
+      display: grid;
+      gap: 10px;
+    }
+
+    .streak-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+      gap: 8px;
+    }
+
+    .streak-stat {
+      min-height: 78px;
+      padding: 8px;
+      border: 4px solid var(--black);
+      filter: blur(0.24px);
+      text-shadow: 0 0 1.6px rgba(5, 5, 5, 0.46);
+    }
+
+    .streak-stat-name,
+    .streak-row-label {
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1;
+      text-transform: lowercase;
+    }
+
+    .streak-stat-value {
+      margin-top: 5px;
+      font-size: clamp(34px, 8vw, 54px);
+      font-weight: 500;
+      line-height: 0.85;
+    }
+
+    .streak-actions,
+    .streak-group-actions,
+    .streak-row-actions,
+    .streak-team-readout {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .streak-actions button,
+    .streak-group-actions button,
+    .streak-row-actions button {
+      min-height: 54px;
+      padding: 7px 9px;
+      font-size: 22px;
+    }
+
+    .streak-primary {
+      color: var(--green);
+      background: var(--black);
+    }
+
+    .streak-student-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .streak-student-row {
+      display: grid;
+      grid-template-columns: minmax(190px, 1fr) repeat(3, minmax(82px, 0.38fr));
+      gap: 6px;
+      padding: 7px;
+      border: 4px solid var(--black);
+    }
+
+    .streak-student-row.point-flash {
+      animation: streak-point-flash 520ms steps(2, end);
+    }
+
+    .streak-student-row.break-flash {
+      animation: streak-break-flash 420ms steps(2, end);
+    }
+
+    .streak-name-cell {
+      min-width: 0;
+      display: grid;
+      align-content: center;
+      gap: 5px;
+    }
+
+    .streak-student-name {
+      overflow-wrap: anywhere;
+      font-size: clamp(26px, 6vw, 40px);
+      font-weight: 500;
+      line-height: 0.9;
+      text-transform: lowercase;
+      filter: blur(0.24px);
+      text-shadow: 0 0 1.6px rgba(5, 5, 5, 0.46);
+    }
+
+    .streak-progress {
+      height: 16px;
+      overflow: hidden;
+      border: 3px solid var(--black);
+    }
+
+    .streak-progress-fill {
+      width: 0;
+      height: 100%;
+      background: var(--black);
+      transition: width 120ms steps(4, end);
+    }
+
+    .streak-number-cell {
+      display: grid;
+      align-content: stretch;
+      gap: 3px;
+    }
+
+    .streak-number-cell input {
+      min-height: 48px;
+      padding: 5px;
+      text-align: center;
+      font-size: 24px;
+    }
+
+    .streak-row-actions {
+      grid-column: 1 / -1;
+    }
+
+    .streak-empty {
+      min-height: 150px;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      border: 4px dashed var(--black);
+      font-size: clamp(32px, 9vw, 64px);
+      font-weight: 500;
+      text-align: center;
+      text-transform: lowercase;
+      filter: blur(0.34px);
+    }
+
+    .streak-card {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 4px solid var(--black);
+    }
+
+    .streak-card-title {
+      font-size: clamp(28px, 8vw, 44px);
+      font-weight: 500;
+      line-height: 0.9;
+      text-transform: lowercase;
+      filter: blur(0.34px);
+      text-shadow: 0 0 1.8px rgba(5, 5, 5, 0.48);
+    }
+
+    .streak-card label:not(.streak-sound) {
+      margin-top: 4px;
+      font-size: 18px;
+      font-weight: 500;
+      text-transform: lowercase;
+      filter: blur(0.24px);
+    }
+
+    .streak-card select {
+      width: 100%;
+      min-height: 52px;
+      padding: 7px 9px;
+      color: var(--black);
+      background: var(--green);
+      border: 4px solid var(--black);
+      border-radius: 0;
+      font: 500 22px/1 var(--brat-font);
+      filter: blur(0.24px);
+      text-shadow: 0 0 1.6px rgba(5, 5, 5, 0.46);
+    }
+
+    .streak-card textarea {
+      min-height: 190px;
+    }
+
+    .streak-team-card {
+      padding: 14px;
+    }
+
+    .streak-team-card input[type="number"] {
+      min-height: 72px;
+      font-size: 32px;
+    }
+
+    .streak-team-box {
+      min-height: 118px;
+      display: grid;
+      align-content: center;
+      gap: 5px;
+      padding: 12px;
+      border: 4px solid var(--black);
+    }
+
+    .streak-team-value {
+      font-size: clamp(52px, 14vw, 82px);
+      font-weight: 500;
+      line-height: 0.85;
+      filter: blur(0.38px);
+    }
+
+    .streak-save {
+      font-size: 15px;
+      font-weight: 500;
+      text-transform: lowercase;
+      filter: blur(0.2px);
+    }
+
+    .streak-celebration {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      place-items: center;
+      padding: 18px;
+      color: var(--black);
+      background: var(--green);
+    }
+
+    .streak-celebration.show {
+      display: grid;
+      animation: streak-celebration-field 860ms steps(4, end) infinite;
+    }
+
+    .streak-celebration-card {
+      width: min(620px, 100%);
+      display: grid;
+      gap: 20px;
+      padding: 28px;
+      border: 5px solid var(--black);
+      text-align: center;
+    }
+
+    .streak-celebration-text {
+      font-size: clamp(56px, 16vw, 112px);
+      font-weight: 500;
+      line-height: 0.86;
+      text-transform: lowercase;
+      filter: blur(0.85px);
+    }
+
+    .streak-celebration-subtext {
+      margin-top: 14px;
+      font-size: clamp(24px, 7vw, 42px);
+      filter: blur(0.34px);
+    }
+
+    @keyframes streak-point-flash {
+      0% { color: var(--green); background: var(--black); }
+      45% { color: var(--black); background: var(--green); }
+      100% { color: var(--black); background: var(--green); }
+    }
+
+    @keyframes streak-break-flash {
+      0% { color: var(--green); background: var(--black); }
+      100% { color: var(--black); background: var(--green); }
+    }
+
+    @keyframes streak-celebration-field {
+      0%, 100% { background: var(--green); }
+      50% { background: var(--black); }
+    }
+
     .statusbar {
       min-height: 38px;
       padding: 9px 12px;
@@ -995,6 +1303,34 @@
         min-height: 86px;
       }
 
+      .streak-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .streak-sound {
+        align-self: stretch;
+        justify-content: flex-end;
+      }
+
+      .streak-student-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .streak-name-cell,
+      .streak-row-actions {
+        grid-column: 1 / -1;
+      }
+
+      .streak-actions,
+      .streak-group-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .streak-team-readout {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
       .wide,
       .clear {
         grid-column: auto;
@@ -1016,7 +1352,7 @@
       <button class="mode-button active" type="button" data-mode="single">single</button>
       <button class="mode-button" type="button" data-mode="multiple">multiple</button>
       <button class="mode-button todo-mode" type="button" data-mode="list">todo</button>
-      <a class="streak-button" href="./streak_counter.html">streak counter</a>
+      <button class="mode-button" type="button" data-mode="streak">streak counter</button>
     </nav>
 
     <section class="content">
@@ -1098,6 +1434,132 @@
         <div class="list-reset-actions">
           <button id="resetTodo" class="todo-reset" type="button">reset all</button>
         </div>
+      </section>
+
+      <section id="streakPanel" class="panel streak-panel" aria-label="Streak counter">
+        <div class="streak-header">
+          <div class="streak-title">streak counter</div>
+          <div>
+            <label class="streak-sound" for="streakSoundToggle">
+              <input id="streakSoundToggle" type="checkbox" checked>
+              sound
+            </label>
+            <div id="streakSaveText" class="streak-save">saved</div>
+          </div>
+        </div>
+
+        <div class="streak-tabs" role="group" aria-label="Streak counter screen">
+          <button id="streakPointsScreenButton" class="active" type="button" aria-pressed="true">individual</button>
+          <button id="streakTeamScreenButton" type="button" aria-pressed="false">team</button>
+          <button id="streakGroupsScreenButton" type="button" aria-pressed="false">groups</button>
+        </div>
+
+        <section id="streakPointsScreenView" class="streak-view">
+          <div class="streak-stats" aria-live="polite">
+            <div class="streak-stat">
+              <div class="streak-stat-name">students</div>
+              <div id="streakStudentCount" class="streak-stat-value">0</div>
+            </div>
+            <div class="streak-stat">
+              <div class="streak-stat-name">points</div>
+              <div id="streakTotalPoints" class="streak-stat-value">0</div>
+            </div>
+            <div class="streak-stat streak-team-summary-stat" hidden>
+              <div class="streak-stat-name">team</div>
+              <div id="streakTeamStreakStat" class="streak-stat-value">0/5</div>
+            </div>
+            <div class="streak-stat streak-team-summary-stat" hidden>
+              <div class="streak-stat-name">team pts</div>
+              <div id="streakTeamPointsStat" class="streak-stat-value">0</div>
+            </div>
+            <div class="streak-stat">
+              <div class="streak-stat-name">active</div>
+              <div id="streakActiveStreaks" class="streak-stat-value">0</div>
+            </div>
+          </div>
+
+          <div class="streak-actions">
+            <button id="streakResetScoresButton" type="button">reset scores</button>
+            <button id="streakCopySummaryButton" type="button">copy</button>
+          </div>
+
+          <div id="streakStudentList" class="streak-student-list"></div>
+          <div id="streakEmptyState" class="streak-empty">no names yet</div>
+        </section>
+
+        <section id="streakGroupsScreenView" class="streak-view" hidden>
+          <div class="streak-card">
+            <div class="streak-card-title">group</div>
+
+            <label for="streakGroupSelect">load</label>
+            <select id="streakGroupSelect"></select>
+            <div class="streak-group-actions">
+              <button id="streakLoadGroupButton" class="streak-primary" type="button">load</button>
+              <button id="streakNewGroupButton" type="button">new</button>
+            </div>
+
+            <label for="streakGroupNameInput">name</label>
+            <input id="streakGroupNameInput" autocomplete="off" spellcheck="false">
+
+            <label for="streakDefaultTargetInput">default streak</label>
+            <input id="streakDefaultTargetInput" type="number" min="1" max="99" step="1" inputmode="numeric">
+            <div class="streak-group-actions">
+              <button id="streakSetAllTargetsButton" type="button">set all</button>
+            </div>
+
+            <label for="streakRosterText">students</label>
+            <textarea id="streakRosterText" spellcheck="false"></textarea>
+
+            <div class="streak-group-actions">
+              <button id="streakApplyRosterButton" class="streak-primary" type="button">apply</button>
+              <button id="streakSaveGroupButton" type="button">save</button>
+            </div>
+
+            <div class="streak-group-actions">
+              <button id="streakSortRosterButton" type="button">sort</button>
+              <button id="streakDeleteGroupButton" type="button">delete</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="streakTeamModeView" class="streak-view" hidden>
+          <div class="streak-card streak-team-card" aria-label="Team streak">
+            <div class="streak-card-title">team streak</div>
+
+            <label for="streakTeamTargetInput">goal</label>
+            <input id="streakTeamTargetInput" type="number" min="1" max="999" step="1" inputmode="numeric">
+
+            <div class="streak-team-readout">
+              <div class="streak-team-box">
+                <div class="streak-row-label">streak</div>
+                <div id="streakTeamStreakReadout" class="streak-team-value">0/5</div>
+              </div>
+              <div class="streak-team-box">
+                <div class="streak-row-label">points</div>
+                <div id="streakTeamPointsReadout" class="streak-team-value">0</div>
+              </div>
+            </div>
+
+            <div class="streak-actions">
+              <button id="streakTeamPassButton" class="streak-primary" type="button">team pass</button>
+              <button id="streakTeamBreakButton" type="button">team broke</button>
+            </div>
+            <div class="streak-actions">
+              <button id="streakUndoTeamButton" type="button" disabled>undo</button>
+              <button id="streakResetTeamButton" type="button">reset team</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="streakCelebration" class="streak-celebration" role="dialog" aria-modal="true" aria-label="Team streak celebration">
+          <div class="streak-celebration-card">
+            <div>
+              <div id="streakCelebrationText" class="streak-celebration-text">team point</div>
+              <div id="streakCelebrationSubtext" class="streak-celebration-subtext">0 points</div>
+            </div>
+            <button id="streakCloseCelebrationButton" class="streak-primary" type="button">keep going</button>
+          </div>
+        </section>
       </section>
     </section>
 
@@ -1264,7 +1726,8 @@
     const panels = {
       single: document.getElementById("singlePanel"),
       multiple: document.getElementById("multiplePanel"),
-      list: document.getElementById("listPanel")
+      list: document.getElementById("listPanel"),
+      streak: document.getElementById("streakPanel")
     };
     const multipleLeader = document.getElementById("multipleLeader");
     const multipleList = document.getElementById("multipleList");
@@ -1498,7 +1961,7 @@
         const saved = JSON.parse(savedState || "{}");
 
         if (saved && typeof saved === "object") {
-          state.mode = saved.mode === "list" ? "list" : saved.mode === "single" ? "single" : ["multiple", "teams", "individuals"].includes(saved.mode) ? "multiple" : "single";
+          state.mode = saved.mode === "list" ? "list" : saved.mode === "streak" ? "streak" : saved.mode === "single" ? "single" : ["multiple", "teams", "individuals"].includes(saved.mode) ? "multiple" : "single";
           state.single = Number.isFinite(Number(saved.single)) ? Number(saved.single) : state.single;
 
           if (Array.isArray(saved.multiple)) {
@@ -2320,6 +2783,7 @@
       renderSingle();
       renderMultiple();
       renderList();
+      streakCounter.render();
       saveState();
     }
 
@@ -2327,7 +2791,7 @@
       state.mode = mode;
       setMenuOpen(false);
       render();
-      statusbar.textContent = mode === "multiple" ? "multiple points" : mode === "list" ? "TODOs" : "single points";
+      statusbar.textContent = mode === "multiple" ? "multiple points" : mode === "list" ? "TODOs" : mode === "streak" ? "streak counter" : "single points";
     }
 
     function changeSingle(amount, kind) {
@@ -2820,6 +3284,915 @@
       selectedSkillEditId = null;
     });
 
+    const streakCounter = (() => {
+      const STREAK_STORAGE_KEY = "streak-counter-state-v1";
+      const STREAK_SOUND_KEY = "streak-counter-sound-v1";
+      const STREAK_PRESETS = [
+        {
+          id: "level-3-boys",
+          name: "level 3 boys",
+          target: 3,
+          names: ["Logan", "Weston", "Danny", "Ethan", "Fabian", "Ari"]
+        },
+        {
+          id: "boys-nga",
+          name: "boys nga",
+          target: 3,
+          names: ["Benjamin", "Javier", "Adam", "Ryan", "Oliver", "Kenneth", "Zayd", "Cody", "Maxon"]
+        },
+        {
+          id: "boys-level-4",
+          name: "boys level 4",
+          target: 3,
+          names: ["Kenneth", "Zayd", "Cody", "Maxon"]
+        },
+        {
+          id: "advanced-boys",
+          name: "advanced boys",
+          target: 3,
+          names: ["Ethan"]
+        }
+      ];
+
+      const panel = document.getElementById("streakPanel");
+      const pointsScreenButton = document.getElementById("streakPointsScreenButton");
+      const groupsScreenButton = document.getElementById("streakGroupsScreenButton");
+      const teamScreenButton = document.getElementById("streakTeamScreenButton");
+      const pointsScreenView = document.getElementById("streakPointsScreenView");
+      const groupsScreenView = document.getElementById("streakGroupsScreenView");
+      const teamModeView = document.getElementById("streakTeamModeView");
+      const groupSelect = document.getElementById("streakGroupSelect");
+      const loadGroupButton = document.getElementById("streakLoadGroupButton");
+      const newGroupButton = document.getElementById("streakNewGroupButton");
+      const groupNameInput = document.getElementById("streakGroupNameInput");
+      const defaultTargetInput = document.getElementById("streakDefaultTargetInput");
+      const setAllTargetsButton = document.getElementById("streakSetAllTargetsButton");
+      const rosterText = document.getElementById("streakRosterText");
+      const applyRosterButton = document.getElementById("streakApplyRosterButton");
+      const saveGroupButton = document.getElementById("streakSaveGroupButton");
+      const sortRosterButton = document.getElementById("streakSortRosterButton");
+      const deleteGroupButton = document.getElementById("streakDeleteGroupButton");
+      const resetScoresButton = document.getElementById("streakResetScoresButton");
+      const copySummaryButton = document.getElementById("streakCopySummaryButton");
+      const teamTargetInput = document.getElementById("streakTeamTargetInput");
+      const teamStreakReadout = document.getElementById("streakTeamStreakReadout");
+      const teamPointsReadout = document.getElementById("streakTeamPointsReadout");
+      const teamPassButton = document.getElementById("streakTeamPassButton");
+      const teamBreakButton = document.getElementById("streakTeamBreakButton");
+      const undoTeamButton = document.getElementById("streakUndoTeamButton");
+      const resetTeamButton = document.getElementById("streakResetTeamButton");
+      const soundToggle = document.getElementById("streakSoundToggle");
+      const studentList = document.getElementById("streakStudentList");
+      const emptyState = document.getElementById("streakEmptyState");
+      const studentCount = document.getElementById("streakStudentCount");
+      const totalPoints = document.getElementById("streakTotalPoints");
+      const teamStreakStat = document.getElementById("streakTeamStreakStat");
+      const teamPointsStat = document.getElementById("streakTeamPointsStat");
+      const activeStreaks = document.getElementById("streakActiveStreaks");
+      const statusText = statusbar;
+      const saveText = document.getElementById("streakSaveText");
+      const streakCelebration = document.getElementById("streakCelebration");
+      const streakCelebrationText = document.getElementById("streakCelebrationText");
+      const streakCelebrationSubtext = document.getElementById("streakCelebrationSubtext");
+      const closeCelebrationButton = document.getElementById("streakCloseCelebrationButton");
+
+      let streakAudioContext = null;
+      let streakCelebrationTimer = null;
+      let scoreResetConfirmTimer = null;
+      let scoreResetArmed = false;
+      let teamResetConfirmTimer = null;
+      let teamResetArmed = false;
+      let teamUndoSnapshot = null;
+      let streakState = makePresetState(STREAK_PRESETS[0]);
+
+      function makeStreakId() {
+        return "s-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+      }
+
+      function clampStreakNumber(value, fallback, min, max) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return fallback;
+        return Math.max(min, Math.min(max, Math.round(number)));
+      }
+
+      function cleanStreakName(name) {
+        return String(name || "").replace(/\s+/g, " ").trim();
+      }
+
+      function parseStreakNames(text) {
+        const seen = new Set();
+        const names = [];
+        String(text || "")
+          .split(/[\n,]/)
+          .map(cleanStreakName)
+          .filter(Boolean)
+          .forEach((name) => {
+            const key = name.toLowerCase();
+            if (seen.has(key)) return;
+            seen.add(key);
+            names.push(name);
+          });
+        return names;
+      }
+
+      function makeStreakStudent(name, target) {
+        return {
+          id: makeStreakId(),
+          name,
+          streak: 0,
+          target: clampStreakNumber(target, 3, 1, 99),
+          points: 0
+        };
+      }
+
+      function makePresetState(preset) {
+        return {
+          screen: "points",
+          mode: "individual",
+          activeGroupKey: "preset:" + preset.id,
+          groupName: preset.name,
+          defaultTarget: preset.target,
+          teamEnabled: false,
+          teamTarget: 5,
+          teamStreak: 0,
+          teamPoints: 0,
+          students: preset.names.map((name) => makeStreakStudent(name, preset.target)),
+          customGroups: {}
+        };
+      }
+
+      function sanitizeStreakState(input) {
+        const fallback = makePresetState(STREAK_PRESETS[0]);
+        if (!input || typeof input !== "object") return fallback;
+        const defaultTarget = clampStreakNumber(input.defaultTarget, 3, 1, 99);
+        const customGroups = input.customGroups && typeof input.customGroups === "object" ? input.customGroups : {};
+        const students = Array.isArray(input.students) ? input.students : [];
+        const legacyMode = input.mode === "team" ? "team" : "individual";
+        const screen = ["points", "groups", "team"].includes(input.screen)
+          ? input.screen
+          : legacyMode === "team" ? "team" : "points";
+
+        return {
+          screen,
+          mode: screen === "team" ? "team" : "individual",
+          activeGroupKey: typeof input.activeGroupKey === "string" ? input.activeGroupKey : fallback.activeGroupKey,
+          groupName: cleanStreakName(input.groupName) || fallback.groupName,
+          defaultTarget,
+          teamEnabled: screen === "team" || Boolean(input.teamEnabled),
+          teamTarget: clampStreakNumber(input.teamTarget, 5, 1, 999),
+          teamStreak: clampStreakNumber(input.teamStreak, 0, 0, 999),
+          teamPoints: clampStreakNumber(input.teamPoints, 0, 0, 999),
+          students: students.map((student) => ({
+            id: typeof student.id === "string" ? student.id : makeStreakId(),
+            name: cleanStreakName(student.name) || "student",
+            streak: clampStreakNumber(student.streak, 0, 0, 999),
+            target: clampStreakNumber(student.target, defaultTarget, 1, 99),
+            points: clampStreakNumber(student.points, 0, 0, 999)
+          })),
+          customGroups
+        };
+      }
+
+      function saveStreakState(message) {
+        try {
+          localStorage.setItem(STREAK_STORAGE_KEY, JSON.stringify(streakState));
+          saveText.textContent = "saved";
+        } catch (error) {
+          saveText.textContent = "save off";
+        }
+        if (message) statusText.textContent = message;
+      }
+
+      function loadStreakState() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(STREAK_STORAGE_KEY));
+          streakState = sanitizeStreakState(saved);
+        } catch (error) {
+          streakState = makePresetState(STREAK_PRESETS[0]);
+        }
+
+        try {
+          soundToggle.checked = localStorage.getItem(STREAK_SOUND_KEY) !== "off";
+        } catch (error) {
+          soundToggle.checked = true;
+        }
+      }
+
+      function renderGroupSelect() {
+        const current = streakState.activeGroupKey;
+        groupSelect.replaceChildren();
+
+        STREAK_PRESETS.forEach((preset) => {
+          const option = document.createElement("option");
+          option.value = "preset:" + preset.id;
+          option.textContent = preset.name;
+          groupSelect.appendChild(option);
+        });
+
+        Object.keys(streakState.customGroups || {}).sort().forEach((name) => {
+          const option = document.createElement("option");
+          option.value = "custom:" + name;
+          option.textContent = name;
+          groupSelect.appendChild(option);
+        });
+
+        groupSelect.value = current;
+        if (groupSelect.value !== current) {
+          const option = document.createElement("option");
+          option.value = current;
+          option.textContent = streakState.groupName || "custom";
+          groupSelect.appendChild(option);
+          groupSelect.value = current;
+        }
+      }
+
+      function renderEditor() {
+        groupNameInput.value = streakState.groupName;
+        defaultTargetInput.value = streakState.defaultTarget;
+        rosterText.value = streakState.students.map((student) => student.name).join("\n");
+      }
+
+      function renderScoreResetControl() {
+        resetScoresButton.textContent = scoreResetArmed ? "confirm reset" : "reset scores";
+        resetScoresButton.classList.toggle("streak-primary", scoreResetArmed);
+      }
+
+      function renderTeamControls() {
+        teamTargetInput.value = streakState.teamTarget;
+        teamStreakReadout.textContent = streakState.teamStreak + "/" + streakState.teamTarget;
+        teamPointsReadout.textContent = streakState.teamPoints;
+        undoTeamButton.disabled = !teamUndoSnapshot;
+        undoTeamButton.title = teamUndoSnapshot ? "restore last team change" : "nothing to undo";
+        resetTeamButton.textContent = teamResetArmed ? "confirm reset" : "reset team";
+        resetTeamButton.classList.toggle("streak-primary", teamResetArmed);
+      }
+
+      function renderStats() {
+        studentCount.textContent = streakState.students.length;
+        totalPoints.textContent = streakState.students.reduce((sum, student) => sum + student.points, 0);
+        teamStreakStat.textContent = streakState.teamStreak + "/" + streakState.teamTarget;
+        teamPointsStat.textContent = streakState.teamPoints;
+        activeStreaks.textContent = streakState.students.filter((student) => student.streak > 0).length;
+        panel.querySelectorAll(".streak-team-summary-stat").forEach((stat) => {
+          stat.hidden = !streakState.teamEnabled;
+        });
+        renderScoreResetControl();
+        renderTeamControls();
+      }
+
+      function renderScreen() {
+        const screen = ["points", "groups", "team"].includes(streakState.screen) ? streakState.screen : "points";
+        streakState.screen = screen;
+        streakState.mode = screen === "team" ? "team" : "individual";
+        pointsScreenView.hidden = screen !== "points";
+        groupsScreenView.hidden = screen !== "groups";
+        teamModeView.hidden = screen !== "team";
+
+        [
+          [pointsScreenButton, "points"],
+          [teamScreenButton, "team"],
+          [groupsScreenButton, "groups"]
+        ].forEach(([button, value]) => {
+          const active = screen === value;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-pressed", String(active));
+        });
+      }
+
+      function makeNumberCell(labelText, value, field, id, min, max) {
+        const cell = document.createElement("div");
+        cell.className = "streak-number-cell";
+        const label = document.createElement("div");
+        label.className = "streak-row-label";
+        label.textContent = labelText;
+        const input = document.createElement("input");
+        input.type = "number";
+        input.inputMode = "numeric";
+        input.min = String(min);
+        input.max = String(max);
+        input.step = "1";
+        input.value = String(value);
+        input.dataset.field = field;
+        input.dataset.id = id;
+        input.setAttribute("aria-label", labelText + " for " + (findStudent(id)?.name || "student"));
+        cell.append(label, input);
+        return cell;
+      }
+
+      function renderStudents() {
+        studentList.replaceChildren();
+        emptyState.hidden = Boolean(streakState.students.length);
+
+        streakState.students.forEach((student) => {
+          const row = document.createElement("article");
+          row.className = "streak-student-row";
+          row.dataset.id = student.id;
+
+          const nameCell = document.createElement("div");
+          nameCell.className = "streak-name-cell";
+          const name = document.createElement("div");
+          name.className = "streak-student-name";
+          name.textContent = student.name.toLowerCase();
+          const progress = document.createElement("div");
+          progress.className = "streak-progress";
+          const fill = document.createElement("div");
+          fill.className = "streak-progress-fill";
+          fill.style.width = Math.min(100, (student.streak / Math.max(student.target, 1)) * 100) + "%";
+          progress.appendChild(fill);
+          nameCell.append(name, progress);
+
+          const streakCell = makeNumberCell("streak", student.streak, "streak", student.id, 0, 999);
+          const targetCell = makeNumberCell("needed", student.target, "target", student.id, 1, 99);
+          const pointsCell = makeNumberCell("points", student.points, "points", student.id, 0, 999);
+
+          const actions = document.createElement("div");
+          actions.className = "streak-row-actions";
+          const pass = document.createElement("button");
+          pass.className = "streak-primary";
+          pass.type = "button";
+          pass.textContent = "pass";
+          pass.title = "add one passed rep";
+          pass.dataset.action = "pass";
+          pass.dataset.id = student.id;
+          const broke = document.createElement("button");
+          broke.type = "button";
+          broke.textContent = "broke";
+          broke.title = "break this student's streak";
+          broke.dataset.action = "break";
+          broke.dataset.id = student.id;
+          actions.append(pass, broke);
+
+          row.append(nameCell, streakCell, targetCell, pointsCell, actions);
+          studentList.appendChild(row);
+        });
+      }
+
+      function renderAll() {
+        renderGroupSelect();
+        renderEditor();
+        renderStats();
+        renderStudents();
+        renderScreen();
+      }
+
+      function findStudent(id) {
+        return streakState.students.find((student) => student.id === id);
+      }
+
+      function flashRow(id, className) {
+        const row = Array.from(studentList.children).find((item) => item.dataset.id === id);
+        if (!row) return;
+        row.classList.remove("point-flash", "break-flash");
+        void row.offsetWidth;
+        row.classList.add(className);
+        window.setTimeout(() => row.classList.remove(className), 540);
+      }
+
+      function getStreakAudioContext() {
+        if (!streakAudioContext) {
+          streakAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        return streakAudioContext;
+      }
+
+      function playTone(frequency, duration, type, volume, startOffset) {
+        if (!soundToggle.checked) return;
+        const context = getStreakAudioContext();
+        if (context.state === "suspended") context.resume();
+        const now = context.currentTime + (startOffset || 0);
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = type || "sine";
+        oscillator.frequency.setValueAtTime(frequency, now);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(volume || 0.16, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start(now);
+        oscillator.stop(now + duration + 0.02);
+      }
+
+      function totalStudentPoints() {
+        return streakState.students.reduce((sum, student) => sum + student.points, 0);
+      }
+
+      function totalAllPoints() {
+        return totalStudentPoints() + streakState.teamPoints;
+      }
+
+      function pointBaseFrequency(pointNumber) {
+        const step = Math.min(18, Math.max(0, pointNumber - 1));
+        return 520 * Math.pow(2, step / 12);
+      }
+
+      function playPointSound(pointNumber, startOffset) {
+        const base = pointBaseFrequency(pointNumber || 1);
+        playTone(base, 0.14, "triangle", 0.24, startOffset || 0);
+        playTone(base * 1.5, 0.18, "sine", 0.22, (startOffset || 0) + 0.07);
+        playTone(base * 2, 0.24, "sine", 0.18, (startOffset || 0) + 0.16);
+      }
+
+      function playPassSound() {
+        playTone(760, 0.075, "square", 0.1, 0);
+      }
+
+      function playUiTapSound() {
+        playTone(380, 0.065, "triangle", 0.105, 0);
+      }
+
+      function playCelebrationSound() {
+        const pointNumber = totalAllPoints();
+        playPointSound(pointNumber, 0);
+        playPointSound(pointNumber + 1, 0.24);
+        playTone(pointBaseFrequency(pointNumber + 2) * 1.5, 0.36, "triangle", 0.16, 0.5);
+      }
+
+      function playBreakSound() {
+        if (!soundToggle.checked) return;
+        const context = getStreakAudioContext();
+        if (context.state === "suspended") context.resume();
+        const now = context.currentTime;
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = "sawtooth";
+        oscillator.frequency.setValueAtTime(190, now);
+        oscillator.frequency.exponentialRampToValueAtTime(72, now + 0.17);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.18, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.19);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start(now);
+        oscillator.stop(now + 0.21);
+      }
+
+      function captureTeamUndo(action) {
+        teamUndoSnapshot = {
+          action,
+          teamEnabled: Boolean(streakState.teamEnabled),
+          teamTarget: streakState.teamTarget,
+          teamStreak: streakState.teamStreak,
+          teamPoints: streakState.teamPoints
+        };
+      }
+
+      function clearTeamResetConfirm() {
+        teamResetArmed = false;
+        if (teamResetConfirmTimer) {
+          window.clearTimeout(teamResetConfirmTimer);
+          teamResetConfirmTimer = null;
+        }
+        renderTeamControls();
+      }
+
+      function armTeamResetConfirm() {
+        teamResetArmed = true;
+        renderTeamControls();
+        statusText.textContent = "tap confirm reset";
+        if (teamResetConfirmTimer) window.clearTimeout(teamResetConfirmTimer);
+        teamResetConfirmTimer = window.setTimeout(() => {
+          teamResetConfirmTimer = null;
+          teamResetArmed = false;
+          renderTeamControls();
+          statusText.textContent = "reset canceled";
+        }, 4000);
+      }
+
+      function clearScoreResetConfirm() {
+        scoreResetArmed = false;
+        if (scoreResetConfirmTimer) {
+          window.clearTimeout(scoreResetConfirmTimer);
+          scoreResetConfirmTimer = null;
+        }
+        renderScoreResetControl();
+      }
+
+      function armScoreResetConfirm() {
+        scoreResetArmed = true;
+        renderScoreResetControl();
+        statusText.textContent = "tap confirm reset";
+        if (scoreResetConfirmTimer) window.clearTimeout(scoreResetConfirmTimer);
+        scoreResetConfirmTimer = window.setTimeout(() => {
+          scoreResetConfirmTimer = null;
+          scoreResetArmed = false;
+          renderScoreResetControl();
+          statusText.textContent = "reset canceled";
+        }, 4000);
+      }
+
+      function undoTeamChange() {
+        if (!teamUndoSnapshot) return;
+        clearTeamResetConfirm();
+        streakState.teamEnabled = teamUndoSnapshot.teamEnabled;
+        streakState.teamTarget = teamUndoSnapshot.teamTarget;
+        streakState.teamStreak = teamUndoSnapshot.teamStreak;
+        streakState.teamPoints = teamUndoSnapshot.teamPoints;
+        const action = teamUndoSnapshot.action;
+        teamUndoSnapshot = null;
+        hideCelebration();
+        renderStats();
+        playPassSound();
+        saveStreakState("undid " + action);
+      }
+
+      function advanceTeam(source) {
+        if (!streakState.teamEnabled) return false;
+        streakState.teamStreak += 1;
+        if (streakState.teamStreak >= streakState.teamTarget) {
+          streakState.teamPoints += 1;
+          streakState.teamStreak = 0;
+          showCelebration(source);
+          playCelebrationSound();
+          return true;
+        }
+        playPassSound();
+        return false;
+      }
+
+      function syncTeamTargetFromInput() {
+        const rawValue = String(teamTargetInput.value || "").trim();
+        if (!rawValue) {
+          teamTargetInput.value = streakState.teamTarget;
+          return;
+        }
+        streakState.teamTarget = clampStreakNumber(rawValue, streakState.teamTarget, 1, 999);
+        if (streakState.teamStreak > streakState.teamTarget) streakState.teamStreak = streakState.teamTarget;
+        teamTargetInput.value = streakState.teamTarget;
+      }
+
+      function breakTeam(source) {
+        clearTeamResetConfirm();
+        captureTeamUndo("team broke");
+        streakState.teamEnabled = true;
+        streakState.teamStreak = 0;
+        renderStats();
+        playBreakSound();
+        saveStreakState(source ? source + " broke team streak" : "team broke");
+      }
+
+      function resetTeam() {
+        if (!teamResetArmed) {
+          armTeamResetConfirm();
+          return;
+        }
+        clearTeamResetConfirm();
+        captureTeamUndo("team reset");
+        streakState.teamEnabled = true;
+        streakState.teamStreak = 0;
+        streakState.teamPoints = 0;
+        renderStats();
+        playBreakSound();
+        saveStreakState("team reset");
+      }
+
+      function showCelebration(source) {
+        const sourceLabel = source && source.toLowerCase() !== "team" ? source.toLowerCase() + " team point" : "team point";
+        streakCelebrationText.textContent = sourceLabel;
+        streakCelebrationSubtext.textContent = streakState.teamPoints + " team point" + (streakState.teamPoints === 1 ? "" : "s");
+        streakCelebration.classList.add("show");
+        closeCelebrationButton.focus();
+        if (streakCelebrationTimer) window.clearTimeout(streakCelebrationTimer);
+        streakCelebrationTimer = window.setTimeout(hideCelebration, 1000);
+      }
+
+      function hideCelebration() {
+        if (streakCelebrationTimer) {
+          window.clearTimeout(streakCelebrationTimer);
+          streakCelebrationTimer = null;
+        }
+        streakCelebration.classList.remove("show");
+      }
+
+      function setScreen(screen) {
+        streakState.screen = ["points", "groups", "team"].includes(screen) ? screen : "points";
+        streakState.mode = streakState.screen === "team" ? "team" : "individual";
+        if (streakState.screen === "team") streakState.teamEnabled = true;
+        renderAll();
+        saveStreakState(streakState.screen + " screen");
+      }
+
+      function passStudent(id) {
+        const student = findStudent(id);
+        if (!student) return;
+        student.streak += 1;
+        if (student.streak >= student.target) {
+          student.points += 1;
+          student.streak = 0;
+          renderStats();
+          renderStudents();
+          flashRow(id, "point-flash");
+          playPointSound(totalStudentPoints());
+          saveStreakState(student.name.toLowerCase() + " got a point");
+          return;
+        }
+        renderStats();
+        renderStudents();
+        flashRow(id, "point-flash");
+        playPassSound();
+        saveStreakState(student.name.toLowerCase() + " streak " + student.streak + "/" + student.target);
+      }
+
+      function breakStudent(id) {
+        const student = findStudent(id);
+        if (!student) return;
+        student.streak = 0;
+        renderStats();
+        renderStudents();
+        flashRow(id, "break-flash");
+        playBreakSound();
+        saveStreakState(student.name.toLowerCase() + " broke");
+      }
+
+      function updateStudentNumber(id, field, value) {
+        const student = findStudent(id);
+        if (!student) return;
+        if (field === "target") student.target = clampStreakNumber(value, streakState.defaultTarget, 1, 99);
+        if (field === "streak") student.streak = clampStreakNumber(value, 0, 0, 999);
+        if (field === "points") student.points = clampStreakNumber(value, 0, 0, 999);
+        saveStreakState("changed " + field);
+        renderStats();
+        renderStudents();
+      }
+
+      function applyRoster() {
+        const names = parseStreakNames(rosterText.value);
+        const target = clampStreakNumber(defaultTargetInput.value, streakState.defaultTarget, 1, 99);
+        const existing = new Map(streakState.students.map((student) => [student.name.toLowerCase(), student]));
+        streakState.defaultTarget = target;
+        streakState.groupName = cleanStreakName(groupNameInput.value) || "new group";
+        streakState.students = names.map((name) => {
+          const old = existing.get(name.toLowerCase());
+          if (!old) return makeStreakStudent(name, target);
+          return {
+            ...old,
+            name,
+            target: clampStreakNumber(old.target, target, 1, 99)
+          };
+        });
+        renderAll();
+        saveStreakState("roster applied");
+      }
+
+      function loadPreset(preset) {
+        const groups = streakState.customGroups || {};
+        const screen = streakState.screen || "groups";
+        streakState = makePresetState(preset);
+        streakState.customGroups = groups;
+        streakState.screen = screen;
+        if (streakState.screen === "team") streakState.teamEnabled = true;
+        renderAll();
+        saveStreakState(preset.name + " loaded");
+      }
+
+      function loadSelectedGroup() {
+        const value = groupSelect.value;
+        if (value.startsWith("preset:")) {
+          const id = value.slice(7);
+          const preset = STREAK_PRESETS.find((item) => item.id === id) || STREAK_PRESETS[0];
+          loadPreset(preset);
+          return;
+        }
+
+        const name = value.slice(7);
+        const saved = streakState.customGroups && streakState.customGroups[name];
+        if (!saved) return;
+        streakState.activeGroupKey = "custom:" + name;
+        streakState.groupName = saved.groupName || name;
+        streakState.defaultTarget = clampStreakNumber(saved.defaultTarget, 3, 1, 99);
+        streakState.teamEnabled = Boolean(saved.teamEnabled);
+        streakState.teamTarget = clampStreakNumber(saved.teamTarget, 5, 1, 999);
+        streakState.teamStreak = clampStreakNumber(saved.teamStreak, 0, 0, 999);
+        streakState.teamPoints = clampStreakNumber(saved.teamPoints, 0, 0, 999);
+        streakState.students = Array.isArray(saved.students)
+          ? saved.students.map((student) => ({
+              id: typeof student.id === "string" ? student.id : makeStreakId(),
+              name: cleanStreakName(student.name) || "student",
+              streak: clampStreakNumber(student.streak, 0, 0, 999),
+              target: clampStreakNumber(student.target, streakState.defaultTarget, 1, 99),
+              points: clampStreakNumber(student.points, 0, 0, 999)
+            }))
+          : [];
+        renderAll();
+        saveStreakState(streakState.groupName + " loaded");
+      }
+
+      function saveCurrentGroup() {
+        applyRoster();
+        const name = cleanStreakName(groupNameInput.value) || streakState.groupName || "new group";
+        streakState.groupName = name;
+        streakState.activeGroupKey = "custom:" + name;
+        streakState.customGroups = streakState.customGroups || {};
+        streakState.customGroups[name] = {
+          groupName: name,
+          defaultTarget: streakState.defaultTarget,
+          teamEnabled: streakState.teamEnabled,
+          teamTarget: streakState.teamTarget,
+          teamStreak: streakState.teamStreak,
+          teamPoints: streakState.teamPoints,
+          students: streakState.students.map((student) => ({ ...student }))
+        };
+        renderAll();
+        saveStreakState(name.toLowerCase() + " saved");
+      }
+
+      function syncActiveCustomGroup() {
+        if (!streakState.activeGroupKey || !streakState.activeGroupKey.startsWith("custom:")) return;
+        const name = streakState.activeGroupKey.slice(7);
+        if (!streakState.customGroups || !streakState.customGroups[name]) return;
+        streakState.customGroups[name] = {
+          groupName: streakState.groupName || name,
+          defaultTarget: streakState.defaultTarget,
+          teamEnabled: streakState.teamEnabled,
+          teamTarget: streakState.teamTarget,
+          teamStreak: streakState.teamStreak,
+          teamPoints: streakState.teamPoints,
+          students: streakState.students.map((student) => ({ ...student }))
+        };
+      }
+
+      function newGroup() {
+        streakState.screen = "groups";
+        streakState.activeGroupKey = "custom:new group";
+        streakState.groupName = "new group";
+        streakState.defaultTarget = 3;
+        streakState.teamEnabled = false;
+        streakState.teamTarget = 5;
+        streakState.teamStreak = 0;
+        streakState.teamPoints = 0;
+        streakState.students = [];
+        renderAll();
+        saveStreakState("new group");
+        groupNameInput.focus();
+        groupNameInput.select();
+      }
+
+      function deleteCurrentGroup() {
+        if (!streakState.activeGroupKey.startsWith("custom:")) {
+          statusText.textContent = "preset stays";
+          return;
+        }
+        const name = streakState.activeGroupKey.slice(7);
+        if (!window.confirm("delete " + name + "?")) return;
+        if (streakState.customGroups) delete streakState.customGroups[name];
+        loadPreset(STREAK_PRESETS[0]);
+      }
+
+      function sortRoster() {
+        const names = parseStreakNames(rosterText.value).sort((a, b) => a.localeCompare(b));
+        rosterText.value = names.join("\n");
+        statusText.textContent = "sorted";
+      }
+
+      function setAllTargets() {
+        const target = clampStreakNumber(defaultTargetInput.value, streakState.defaultTarget, 1, 99);
+        streakState.defaultTarget = target;
+        streakState.students.forEach((student) => {
+          student.target = target;
+          if (student.streak > target) student.streak = target;
+        });
+        renderAll();
+        saveStreakState("all targets " + target);
+      }
+
+      function resetScores() {
+        if (!scoreResetArmed) {
+          armScoreResetConfirm();
+          return;
+        }
+        clearScoreResetConfirm();
+        streakState.students.forEach((student) => {
+          student.streak = 0;
+          student.points = 0;
+        });
+        syncActiveCustomGroup();
+        renderAll();
+        saveStreakState("scores reset");
+        try {
+          playBreakSound();
+        } catch (error) {
+          saveText.textContent = "saved";
+        }
+      }
+
+      async function copySummary() {
+        const lines = [
+          streakState.groupName,
+          ...streakState.students.map((student) => student.name + ": " + student.points + " point(s), streak " + student.streak + "/" + student.target)
+        ];
+        try {
+          await navigator.clipboard.writeText(lines.join("\n"));
+          statusText.textContent = "copied";
+        } catch (error) {
+          statusText.textContent = "copy unavailable";
+        }
+      }
+
+      studentList.addEventListener("click", (event) => {
+        const button = event.target.closest("button");
+        if (!button) return;
+        if (button.dataset.action === "pass") passStudent(button.dataset.id);
+        if (button.dataset.action === "break") breakStudent(button.dataset.id);
+      });
+
+      studentList.addEventListener("change", (event) => {
+        const input = event.target.closest("input[data-field]");
+        if (!input) return;
+        updateStudentNumber(input.dataset.id, input.dataset.field, input.value);
+      });
+
+      studentList.addEventListener("keydown", (event) => {
+        const input = event.target.closest("input[data-field]");
+        if (!input || event.key !== "Enter") return;
+        updateStudentNumber(input.dataset.id, input.dataset.field, input.value);
+        input.blur();
+      });
+
+      defaultTargetInput.addEventListener("change", () => {
+        streakState.defaultTarget = clampStreakNumber(defaultTargetInput.value, streakState.defaultTarget, 1, 99);
+        defaultTargetInput.value = streakState.defaultTarget;
+        saveStreakState("default changed");
+      });
+
+      teamTargetInput.addEventListener("change", () => {
+        syncTeamTargetFromInput();
+        renderStats();
+        saveStreakState("team goal " + streakState.teamTarget);
+      });
+
+      groupNameInput.addEventListener("change", () => {
+        streakState.groupName = cleanStreakName(groupNameInput.value) || streakState.groupName;
+        renderEditor();
+        saveStreakState("group renamed");
+      });
+
+      soundToggle.addEventListener("change", () => {
+        try {
+          localStorage.setItem(STREAK_SOUND_KEY, soundToggle.checked ? "on" : "off");
+        } catch (error) {
+          saveText.textContent = "save off";
+        }
+        if (soundToggle.checked) playPassSound();
+      });
+
+      loadGroupButton.addEventListener("click", loadSelectedGroup);
+      groupSelect.addEventListener("change", () => {
+        playUiTapSound();
+        loadSelectedGroup();
+      });
+      newGroupButton.addEventListener("click", newGroup);
+      applyRosterButton.addEventListener("click", applyRoster);
+      saveGroupButton.addEventListener("click", saveCurrentGroup);
+      setAllTargetsButton.addEventListener("click", setAllTargets);
+      sortRosterButton.addEventListener("click", sortRoster);
+      deleteGroupButton.addEventListener("click", deleteCurrentGroup);
+      resetScoresButton.addEventListener("click", resetScores);
+      copySummaryButton.addEventListener("click", copySummary);
+      pointsScreenButton.addEventListener("click", () => setScreen("points"));
+      groupsScreenButton.addEventListener("click", () => setScreen("groups"));
+      teamScreenButton.addEventListener("click", () => setScreen("team"));
+      teamPassButton.addEventListener("click", () => {
+        clearTeamResetConfirm();
+        syncTeamTargetFromInput();
+        captureTeamUndo("team pass");
+        streakState.teamEnabled = true;
+        const teamPoint = advanceTeam("team");
+        renderStats();
+        saveStreakState(teamPoint ? "team got a point" : "team streak " + streakState.teamStreak + "/" + streakState.teamTarget);
+      });
+      teamBreakButton.addEventListener("click", () => breakTeam("team"));
+      undoTeamButton.addEventListener("click", undoTeamChange);
+      resetTeamButton.addEventListener("click", resetTeam);
+      closeCelebrationButton.addEventListener("click", hideCelebration);
+      streakCelebration.addEventListener("click", (event) => {
+        if (event.target === streakCelebration) hideCelebration();
+      });
+
+      panel.addEventListener("click", (event) => {
+        if (!(event.target instanceof Element)) return;
+        const control = event.target.closest("button");
+        if (!control || control.disabled) return;
+        const usesActionSound =
+          control.matches("[data-action]") ||
+          control === teamPassButton ||
+          control === teamBreakButton ||
+          control === undoTeamButton ||
+          (control === resetScoresButton && scoreResetArmed) ||
+          (control === resetTeamButton && teamResetArmed);
+        if (!usesActionSound) playUiTapSound();
+      }, true);
+
+      return {
+        load() {
+          loadStreakState();
+          renderAll();
+          saveStreakState();
+        },
+        render: renderAll
+      };
+    })();
+
+    streakCounter.load();
     loadState();
     render();
   </script>
