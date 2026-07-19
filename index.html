@@ -357,13 +357,27 @@
 
     .counter-actions {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px;
     }
 
     .counter-actions button {
       min-height: 58px;
       font-size: clamp(24px, 7vw, 42px);
+    }
+
+    .counter-actions .counter-clear {
+      color: var(--green);
+      background: var(--black);
+      font-size: clamp(16px, 4.5vw, 24px);
+      text-transform: lowercase;
+    }
+
+    .counter-actions .counter-clear.armed {
+      color: var(--black);
+      background: var(--green);
+      outline: 4px solid var(--black);
+      outline-offset: -7px;
     }
 
     .multiple-action {
@@ -972,6 +986,37 @@
       background: var(--black);
     }
 
+    .remove-checkbox-option {
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border: 4px solid var(--black);
+      font-size: 26px;
+      line-height: 1;
+      text-transform: lowercase;
+      cursor: pointer;
+    }
+
+    .remove-checkbox-option.selected {
+      color: var(--green);
+      background: var(--black);
+    }
+
+    .remove-checkbox-option input {
+      width: 28px;
+      height: 28px;
+      min-height: 28px;
+      flex: 0 0 28px;
+      margin: 0;
+      accent-color: var(--black);
+    }
+
+    .remove-checkbox-option.selected input {
+      accent-color: var(--green);
+    }
+
     .empty {
       min-height: 132px;
       display: grid;
@@ -1178,6 +1223,28 @@
       outline: 4px solid var(--black);
       outline-offset: 2px;
       caret-color: var(--black);
+    }
+
+    .brat-field-caret {
+      position: fixed;
+      z-index: 2147483001;
+      width: 4px;
+      min-height: 20px;
+      pointer-events: none;
+      background: var(--black);
+      animation: brat-field-caret-blink 900ms steps(1, end) infinite;
+    }
+
+    @keyframes brat-field-caret-blink {
+      0%, 52% { opacity: 1; }
+      53%, 100% { opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .brat-field-caret {
+        animation: none;
+        opacity: 1;
+      }
     }
 
     body.brat-keyboard-open {
@@ -1480,6 +1547,7 @@
     .window,
     .counter-dialog,
     .brat-keyboard-dock,
+    .brat-field-caret,
     .skill-flash,
     .celebration,
     .streak-celebration,
@@ -1510,7 +1578,6 @@
       }
 
       .controls,
-      .counter-actions,
       .list-actions,
       .list-reset-actions {
         grid-template-columns: 1fr;
@@ -1827,7 +1894,7 @@
   <dialog id="removeDialog" class="counter-dialog" aria-labelledby="removeDialogTitle">
     <form id="removeCounterForm" class="dialog-content">
       <h2 id="removeDialogTitle" class="dialog-title">remove class / team</h2>
-      <p class="dialog-description">choose one, then confirm</p>
+      <p id="removeDialogDescription" class="dialog-description">choose one or more, then confirm</p>
       <div id="removeOptions" class="remove-options" aria-label="Classes and teams to remove"></div>
       <div class="dialog-actions">
         <button id="cancelRemove" type="button">cancel</button>
@@ -1876,6 +1943,8 @@
       </div>
     </form>
   </dialog>
+
+  <span id="bratFieldCaret" class="brat-field-caret" aria-hidden="true" hidden></span>
 
   <section id="bratKeyboardDialog" class="brat-keyboard-dock" role="dialog" aria-modal="false" aria-labelledby="bratKeyboardLabel" hidden>
     <div class="brat-keyboard-shell">
@@ -2049,6 +2118,7 @@
     const cancelAdd = document.getElementById("cancelAdd");
     const removeDialog = document.getElementById("removeDialog");
     const removeCounterForm = document.getElementById("removeCounterForm");
+    const removeDialogDescription = document.getElementById("removeDialogDescription");
     const removeOptions = document.getElementById("removeOptions");
     const confirmRemove = document.getElementById("confirmRemove");
     const cancelRemove = document.getElementById("cancelRemove");
@@ -2079,6 +2149,7 @@
     const resetStepTwo = document.getElementById("resetStepTwo");
     const confirmReset = document.getElementById("confirmReset");
     const cancelReset = document.getElementById("cancelReset");
+    const bratFieldCaret = document.getElementById("bratFieldCaret");
     const bratKeyboardDialog = document.getElementById("bratKeyboardDialog");
     const bratKeyboardLabel = document.getElementById("bratKeyboardLabel");
     const bratKeyboardStatus = document.getElementById("bratKeyboardStatus");
@@ -2155,7 +2226,11 @@
       listSeedVersion: 0
     };
     let audioContext = null;
-    let selectedRemovalId = null;
+    let selectedRemovalIds = new Set();
+    let removeConfirmationArmed = false;
+    let removeConfirmationTimer = null;
+    let armedCounterClearId = null;
+    let counterClearTimer = null;
     let selectedClassEditId = null;
     let pendingResetKind = null;
     let resetConfirmStep = 1;
@@ -2169,7 +2244,17 @@
     let bratKeyboardRepeatDelay = null;
     let bratKeyboardRepeatTimer = null;
     let bratKeyboardRepeatedButton = null;
+    let bratCaretRevealRequested = false;
     const dialogFocus = new WeakMap();
+    const bratCaretCanvas = document.createElement("canvas");
+    const bratCaretMirror = document.createElement("div");
+    const bratCaretMarker = document.createElement("span");
+    bratCaretMirror.setAttribute("aria-hidden", "true");
+    bratCaretMirror.style.position = "fixed";
+    bratCaretMirror.style.left = "-10000px";
+    bratCaretMirror.style.visibility = "hidden";
+    bratCaretMarker.textContent = "\u200b";
+    document.body.appendChild(bratCaretMirror);
 
     function makeId(prefix) {
       return prefix + "-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
@@ -2177,6 +2262,10 @@
 
     function normalizeName(value) {
       return String(value || "").trim().replace(/\s+/g, " ");
+    }
+
+    function normalizeMultipleName(value) {
+      return normalizeName(value).toLowerCase();
     }
 
     function getKeyboardLabel(target) {
@@ -2256,12 +2345,153 @@
         if (dispatchInput && state.dispatchChange) target.dispatchEvent(new Event("input", { bubbles: true }));
       }
       if (state.onDraft) state.onDraft(state.value);
+      scheduleBratFieldCaret(true);
     }
 
     function syncBratKeyboardSelectionFromTarget(target) {
       if (!bratKeyboardState || bratKeyboardState.target !== target || typeof target.selectionStart !== "number") return;
       bratKeyboardState.selectionStart = Math.max(0, Math.min(bratKeyboardState.value.length, target.selectionStart));
       bratKeyboardState.selectionEnd = Math.max(bratKeyboardState.selectionStart, Math.min(bratKeyboardState.value.length, target.selectionEnd));
+    }
+
+    function getBratCaretLineHeight(style) {
+      const lineHeight = Number.parseFloat(style.lineHeight);
+      return Number.isFinite(lineHeight) ? lineHeight : Number.parseFloat(style.fontSize) * 1.15;
+    }
+
+    function transformBratCaretText(value, textTransform) {
+      if (textTransform === "lowercase") return value.toLowerCase();
+      if (textTransform === "uppercase") return value.toUpperCase();
+      return value;
+    }
+
+    function measureSingleLineBratCaret(target, value, position, style, targetRect) {
+      const context = bratCaretCanvas.getContext("2d");
+      const text = transformBratCaretText(value, style.textTransform);
+      const before = text.slice(0, position);
+      const letterSpacing = Number.parseFloat(style.letterSpacing) || 0;
+      const measure = (part) => {
+        if (!context) return 0;
+        context.font = `${style.fontStyle} ${style.fontVariant} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+        return context.measureText(part).width + Math.max(0, part.length - 1) * letterSpacing;
+      };
+      const borderLeft = Number.parseFloat(style.borderLeftWidth) || 0;
+      const borderRight = Number.parseFloat(style.borderRightWidth) || 0;
+      const paddingLeft = Number.parseFloat(style.paddingLeft) || 0;
+      const paddingRight = Number.parseFloat(style.paddingRight) || 0;
+      const contentLeft = targetRect.left + borderLeft + paddingLeft;
+      const contentWidth = targetRect.width - borderLeft - borderRight - paddingLeft - paddingRight;
+      const textWidth = measure(text);
+      let alignment = style.textAlign;
+      if (alignment === "start") alignment = style.direction === "rtl" ? "right" : "left";
+      if (alignment === "end") alignment = style.direction === "rtl" ? "left" : "right";
+      let textLeft = contentLeft;
+      if (alignment === "center") textLeft += Math.max(0, (contentWidth - textWidth) / 2);
+      if (alignment === "right") textLeft += Math.max(0, contentWidth - textWidth);
+
+      const lineHeight = getBratCaretLineHeight(style);
+      return {
+        x: textLeft + measure(before) - (target.scrollLeft || 0),
+        y: targetRect.top + (targetRect.height - lineHeight) / 2,
+        height: lineHeight
+      };
+    }
+
+    function measureMultilineBratCaret(target, value, position, style, targetRect) {
+      Object.assign(bratCaretMirror.style, {
+        position: "fixed",
+        left: "-10000px",
+        top: "0",
+        visibility: "hidden",
+        boxSizing: "border-box",
+        width: target.clientWidth + (Number.parseFloat(style.borderLeftWidth) || 0) + (Number.parseFloat(style.borderRightWidth) || 0) + "px",
+        minHeight: "0",
+        height: "auto",
+        padding: style.padding,
+        borderTop: `${style.borderTopWidth} solid transparent`,
+        borderRight: `${style.borderRightWidth} solid transparent`,
+        borderBottom: `${style.borderBottomWidth} solid transparent`,
+        borderLeft: `${style.borderLeftWidth} solid transparent`,
+        fontFamily: style.fontFamily,
+        fontSize: style.fontSize,
+        fontStyle: style.fontStyle,
+        fontWeight: style.fontWeight,
+        lineHeight: style.lineHeight,
+        letterSpacing: style.letterSpacing,
+        textAlign: style.textAlign,
+        textTransform: style.textTransform,
+        whiteSpace: "pre-wrap",
+        overflowWrap: style.overflowWrap,
+        wordBreak: style.wordBreak,
+        tabSize: style.tabSize
+      });
+      bratCaretMirror.replaceChildren(document.createTextNode(value.slice(0, position)), bratCaretMarker);
+      const mirrorRect = bratCaretMirror.getBoundingClientRect();
+      const markerRect = bratCaretMarker.getBoundingClientRect();
+      const result = {
+        x: targetRect.left + markerRect.left - mirrorRect.left - target.scrollLeft,
+        y: targetRect.top + markerRect.top - mirrorRect.top - target.scrollTop,
+        height: getBratCaretLineHeight(style)
+      };
+      return result;
+    }
+
+    function positionBratFieldCaret() {
+      const keyboardState = bratKeyboardState;
+      const target = keyboardState?.target;
+      if (!keyboardState || !target?.isConnected || !bratKeyboardHost) {
+        bratFieldCaret.hidden = true;
+        return;
+      }
+
+      const style = getComputedStyle(target);
+      const targetRect = target.getBoundingClientRect();
+      const position = Math.max(0, Math.min(keyboardState.value.length, keyboardState.selectionEnd));
+      let point = keyboardState.mode === "multiline"
+        ? measureMultilineBratCaret(target, keyboardState.value, position, style, targetRect)
+        : measureSingleLineBratCaret(target, keyboardState.value, position, style, targetRect);
+      const innerLeft = targetRect.left + target.clientLeft;
+      const innerRight = targetRect.right - Math.max(0, target.offsetWidth - target.clientWidth - target.clientLeft);
+      const innerTop = targetRect.top + target.clientTop;
+      const innerBottom = targetRect.bottom - Math.max(0, target.offsetHeight - target.clientHeight - target.clientTop);
+      const revealRequested = bratCaretRevealRequested;
+      bratCaretRevealRequested = false;
+
+      if (revealRequested) {
+        if (point.x < innerLeft) target.scrollLeft -= innerLeft - point.x + 4;
+        if (point.x > innerRight - 4) target.scrollLeft += point.x - innerRight + 8;
+        if (keyboardState.mode === "multiline" && point.y < innerTop) target.scrollTop -= innerTop - point.y + 4;
+        if (keyboardState.mode === "multiline" && point.y + point.height > innerBottom) target.scrollTop += point.y + point.height - innerBottom + 4;
+        point = keyboardState.mode === "multiline"
+          ? measureMultilineBratCaret(target, keyboardState.value, position, style, targetRect)
+          : measureSingleLineBratCaret(target, keyboardState.value, position, style, targetRect);
+      }
+
+      const visibleTop = Math.max(innerTop, point.y);
+      const visibleBottom = Math.min(innerBottom, point.y + point.height);
+
+      if (point.x < innerLeft - 1 || point.x > innerRight + 1 || visibleBottom - visibleTop < 4) {
+        bratFieldCaret.hidden = true;
+        return;
+      }
+
+      let left = Math.max(innerLeft, Math.min(innerRight - 4, point.x));
+      let top = visibleTop;
+      if (bratKeyboardHost !== document.body) {
+        const hostRect = bratKeyboardHost.getBoundingClientRect();
+        left -= hostRect.left + bratKeyboardHost.clientLeft;
+        top -= hostRect.top + bratKeyboardHost.clientTop;
+      }
+
+      bratFieldCaret.style.left = left + "px";
+      bratFieldCaret.style.top = top + "px";
+      bratFieldCaret.style.height = visibleBottom - visibleTop + "px";
+      bratFieldCaret.hidden = false;
+    }
+
+    function scheduleBratFieldCaret(reveal = false) {
+      if (reveal) bratCaretRevealRequested = true;
+      window.requestAnimationFrame(positionBratFieldCaret);
     }
 
     function renderBratKeyboard() {
@@ -2283,6 +2513,7 @@
       document.querySelectorAll("[data-letter]").forEach((button) => {
         button.textContent = bratKeyboardShifted ? button.dataset.letter.toUpperCase() : button.dataset.letter;
       });
+      scheduleBratFieldCaret();
     }
 
     function getBratKeyboardHost(target) {
@@ -2327,6 +2558,7 @@
         bratKeyboardDialog.style.top = "auto";
         bratKeyboardDialog.style.bottom = "0";
       }
+      scheduleBratFieldCaret();
     }
 
     const bratKeyboardResizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(() => {
@@ -2336,9 +2568,11 @@
     function attachBratKeyboardDock(target) {
       bratKeyboardHost = getBratKeyboardHost(target);
       bratKeyboardHost.appendChild(bratKeyboardDialog);
+      bratKeyboardHost.appendChild(bratFieldCaret);
       bratKeyboardHost.classList?.add("keyboard-host");
       document.body.classList.toggle("brat-keyboard-body-host", bratKeyboardHost === document.body);
       bratKeyboardDialog.hidden = false;
+      bratFieldCaret.hidden = true;
       bratKeyboardResizeObserver?.observe(bratKeyboardDialog);
       positionBratKeyboardDock();
       window.requestAnimationFrame(() => {
@@ -2354,10 +2588,13 @@
       document.body.classList.remove("brat-keyboard-open", "brat-keyboard-body-host");
       document.body.style.removeProperty("--brat-keyboard-height");
       bratKeyboardDialog.hidden = true;
+      bratFieldCaret.hidden = true;
+      bratCaretRevealRequested = false;
       bratKeyboardDialog.style.removeProperty("left");
       bratKeyboardDialog.style.removeProperty("top");
       bratKeyboardDialog.style.removeProperty("bottom");
       if (bratKeyboardDialog.parentElement !== document.body) document.body.appendChild(bratKeyboardDialog);
+      if (bratFieldCaret.parentElement !== document.body) document.body.appendChild(bratFieldCaret);
       bratKeyboardHost = null;
     }
 
@@ -2717,7 +2954,10 @@
       const target = event.target.closest("[data-brat-keyboard]");
       if (!target || bratKeyboardClosing) return;
       if (bratKeyboardState?.target === target) {
-        window.requestAnimationFrame(() => syncBratKeyboardSelectionFromTarget(target));
+        window.requestAnimationFrame(() => {
+          syncBratKeyboardSelectionFromTarget(target);
+          renderBratKeyboard();
+        });
         return;
       }
       openBratKeyboard(target);
@@ -2733,6 +2973,13 @@
     window.addEventListener("resize", positionBratKeyboardDock);
     window.visualViewport?.addEventListener("resize", positionBratKeyboardDock);
     window.visualViewport?.addEventListener("scroll", positionBratKeyboardDock);
+    document.addEventListener("scroll", () => scheduleBratFieldCaret(), true);
+    document.addEventListener("selectionchange", () => {
+      const target = bratKeyboardState?.target;
+      if (!target || target !== document.activeElement) return;
+      syncBratKeyboardSelectionFromTarget(target);
+      scheduleBratFieldCaret();
+    });
     new MutationObserver(() => {
       if (bratKeyboardState?.target && !bratKeyboardState.target.isConnected) finishBratKeyboard("cleanup");
     }).observe(document.body, { childList: true, subtree: true });
@@ -2763,7 +3010,7 @@
 
         return {
           id,
-          name: makeUniqueName(rawCounter.name, prefix + " " + (index + 1), usedNames),
+          name: makeUniqueName(normalizeMultipleName(rawCounter.name), prefix + " " + (index + 1), usedNames),
           score: Number.isFinite(Number(rawCounter.score)) ? Number(rawCounter.score) : 0
         };
       });
@@ -3217,7 +3464,7 @@
       const saveEdit = () => {
         if (settled) return true;
 
-        const name = normalizeName(input.value);
+        const name = normalizeMultipleName(input.value);
         if (!name) {
           statusbar.textContent = "name cannot be blank";
           return "name cannot be blank";
@@ -3299,7 +3546,16 @@
         minus.setAttribute("aria-label", "Subtract point from " + item.name);
         minus.addEventListener("click", () => changeMultipleScore(item.id, -1, card));
 
-        actions.append(plus, minus);
+        const clear = document.createElement("button");
+        const clearIsArmed = armedCounterClearId === item.id;
+        clear.type = "button";
+        clear.className = "counter-clear" + (clearIsArmed ? " armed" : "");
+        clear.textContent = clearIsArmed ? "confirm" : "clear";
+        clear.setAttribute("aria-pressed", String(clearIsArmed));
+        clear.setAttribute("aria-label", clearIsArmed ? "Confirm clearing " + item.name : "Clear points for " + item.name);
+        clear.addEventListener("click", () => clearMultipleCounter(item.id));
+
+        actions.append(plus, minus, clear);
         card.append(name, score, actions);
         multipleList.appendChild(card);
       });
@@ -3463,6 +3719,7 @@
 
       if (state.multiple.some((item) => item.score !== 0) && !window.confirm("Load " + savedClass.name + " and reset the current scores?")) return;
 
+      cancelCounterClear(false);
       state.multiple = normalizeCounters(
         savedClass.students.map((name) => ({ name, score: 0 })),
         "student"
@@ -3759,6 +4016,7 @@
 
     function setMode(mode) {
       if (bratKeyboardState) finishBratKeyboard(bratKeyboardState.isFormField ? "hide" : "cancel");
+      cancelCounterClear(false);
       state.mode = mode;
       setMenuOpen(false);
       render();
@@ -3778,6 +4036,7 @@
       const item = state.multiple.find((counter) => counter.id === id);
       if (!item) return;
 
+      cancelCounterClear(false);
       item.score += amount;
       saveState();
       renderMultiple();
@@ -3785,6 +4044,47 @@
       statusbar.textContent = item.name + (amount > 0 ? " +1" : " -1");
 
       flash(getCounterCard(item.id) || element, amount > 0 ? "plus" : "minus");
+    }
+
+    function cancelCounterClear(render = true) {
+      const wasArmed = armedCounterClearId !== null;
+      window.clearTimeout(counterClearTimer);
+      counterClearTimer = null;
+      armedCounterClearId = null;
+      if (wasArmed && render) renderMultiple();
+    }
+
+    function clearMultipleCounter(id) {
+      const item = state.multiple.find((counter) => counter.id === id);
+      if (!item) return;
+      if (item.score === 0) {
+        cancelCounterClear();
+        statusbar.textContent = item.name + " is already at zero";
+        return;
+      }
+
+      if (armedCounterClearId === item.id) {
+        cancelCounterClear(false);
+        item.score = 0;
+        saveState();
+        renderMultiple();
+        playSound("clear");
+        flash(getCounterCard(item.id), "minus");
+        statusbar.textContent = item.name + " cleared";
+        return;
+      }
+
+      cancelCounterClear(false);
+      armedCounterClearId = item.id;
+      renderMultiple();
+      statusbar.textContent = "tap confirm on " + item.name + " to clear";
+      counterClearTimer = window.setTimeout(() => {
+        if (armedCounterClearId !== item.id) return;
+        armedCounterClearId = null;
+        counterClearTimer = null;
+        renderMultiple();
+        statusbar.textContent = item.name + " clear cancelled";
+      }, 3000);
     }
 
     function openCounterDialog(dialog) {
@@ -3806,7 +4106,7 @@
     }
 
     function addMultipleCounter(rawName) {
-      const name = normalizeName(rawName);
+      const name = normalizeMultipleName(rawName);
       if (!name) {
         statusbar.textContent = "type a name first";
         addCounterName.focus();
@@ -3839,26 +4139,79 @@
     }
 
     function renderRemoveOptions() {
-      removeOptions.innerHTML = "";
+      removeOptions.replaceChildren();
+
+      const removeAll = document.createElement("button");
+      const allSelected = state.multiple.length > 0 && selectedRemovalIds.size === state.multiple.length;
+      removeAll.type = "button";
+      removeAll.className = "remove-option";
+      removeAll.dataset.removeAll = "";
+      removeAll.textContent = allSelected ? "unselect all" : "remove all — " + state.multiple.length + " names";
+      removeAll.setAttribute("aria-pressed", String(allSelected));
+      removeAll.addEventListener("click", () => {
+        resetRemoveConfirmation(false);
+        if (allSelected) selectedRemovalIds.clear();
+        else selectedRemovalIds = new Set(state.multiple.map((item) => item.id));
+        renderRemoveOptions();
+        removeOptions.querySelector("[data-remove-all]")?.focus();
+      });
+      removeOptions.appendChild(removeAll);
 
       state.multiple.forEach((item) => {
-        const option = document.createElement("button");
-        const selected = item.id === selectedRemovalId;
-        option.type = "button";
-        option.className = "remove-option";
-        option.textContent = item.name + ": " + item.score;
-        option.setAttribute("aria-pressed", selected ? "true" : "false");
-        option.setAttribute("aria-label", "Select " + item.name + " with " + item.score + " points");
-        option.addEventListener("click", () => {
-          selectedRemovalId = item.id;
-          renderRemoveOptions();
-          const selectedOption = Array.from(removeOptions.children).find((button) => button.getAttribute("aria-pressed") === "true");
-          if (selectedOption) selectedOption.focus();
+        const option = document.createElement("label");
+        const checkbox = document.createElement("input");
+        const label = document.createElement("span");
+        const selected = selectedRemovalIds.has(item.id);
+        option.className = "remove-checkbox-option" + (selected ? " selected" : "");
+        checkbox.type = "checkbox";
+        checkbox.checked = selected;
+        checkbox.value = item.id;
+        checkbox.setAttribute("aria-label", "Select " + item.name + " with " + item.score + " points");
+        label.textContent = item.name + ": " + item.score;
+        checkbox.addEventListener("change", () => {
+          resetRemoveConfirmation(false);
+          if (checkbox.checked) selectedRemovalIds.add(item.id);
+          else selectedRemovalIds.delete(item.id);
+          option.classList.toggle("selected", checkbox.checked);
+          updateRemoveDialogState();
         });
+        option.append(checkbox, label);
         removeOptions.appendChild(option);
       });
 
-      confirmRemove.disabled = !selectedRemovalId;
+      updateRemoveDialogState();
+    }
+
+    function updateRemoveDialogState() {
+      const validIds = new Set(state.multiple.map((item) => item.id));
+      selectedRemovalIds = new Set(Array.from(selectedRemovalIds).filter((id) => validIds.has(id)));
+      const count = selectedRemovalIds.size;
+      const allSelected = count > 0 && count === state.multiple.length;
+      const removeAll = removeOptions.querySelector("[data-remove-all]");
+      if (removeAll) {
+        removeAll.textContent = allSelected ? "unselect all" : "remove all — " + state.multiple.length + " names";
+        removeAll.setAttribute("aria-pressed", String(allSelected));
+      }
+      confirmRemove.disabled = count === 0;
+      confirmRemove.textContent = removeConfirmationArmed
+        ? "confirm remove " + count
+        : allSelected
+          ? "remove all"
+          : count > 1
+            ? "remove " + count + " selected"
+            : "remove selected";
+      removeDialogDescription.textContent = removeConfirmationArmed
+        ? "tap confirm again to permanently remove " + count
+        : count
+          ? count + " selected"
+          : "choose one or more, then confirm";
+    }
+
+    function resetRemoveConfirmation(update = true) {
+      window.clearTimeout(removeConfirmationTimer);
+      removeConfirmationTimer = null;
+      removeConfirmationArmed = false;
+      if (update) updateRemoveDialogState();
     }
 
     function openRemoveDialog() {
@@ -3867,25 +4220,41 @@
         return;
       }
 
-      selectedRemovalId = null;
+      selectedRemovalIds = new Set();
+      resetRemoveConfirmation(false);
       renderRemoveOptions();
       openCounterDialog(removeDialog);
     }
 
-    function removeSelectedCounter() {
-      const item = state.multiple.find((counter) => counter.id === selectedRemovalId);
-      if (!item) {
-        statusbar.textContent = "choose a class or team first";
-        renderRemoveOptions();
+    function removeSelectedCounters() {
+      const selectedItems = state.multiple.filter((counter) => selectedRemovalIds.has(counter.id));
+      if (!selectedItems.length) {
+        statusbar.textContent = "choose at least one name first";
+        updateRemoveDialogState();
         return;
       }
 
-      state.multiple = state.multiple.filter((counter) => counter.id !== item.id);
-      selectedRemovalId = null;
+      if (!removeConfirmationArmed) {
+        removeConfirmationArmed = true;
+        updateRemoveDialogState();
+        statusbar.textContent = "confirm removal of " + selectedItems.length;
+        removeConfirmationTimer = window.setTimeout(() => {
+          removeConfirmationArmed = false;
+          removeConfirmationTimer = null;
+          updateRemoveDialogState();
+        }, 4000);
+        return;
+      }
+
+      const selectedIds = new Set(selectedItems.map((item) => item.id));
+      resetRemoveConfirmation(false);
+      cancelCounterClear(false);
+      state.multiple = state.multiple.filter((counter) => !selectedIds.has(counter.id));
+      selectedRemovalIds = new Set();
       saveState();
       renderMultiple();
       closeCounterDialog(removeDialog);
-      statusbar.textContent = item.name + " removed";
+      statusbar.textContent = selectedItems.length === 1 ? selectedItems[0].name + " removed" : selectedItems.length + " names removed";
     }
 
     function performSingleReset() {
@@ -3898,6 +4267,7 @@
     }
 
     function performMultipleReset() {
+      cancelCounterClear(false);
       state.multiple.forEach((item) => {
         item.score = 0;
       });
@@ -4235,7 +4605,7 @@
 
     removeCounterForm.addEventListener("submit", (event) => {
       event.preventDefault();
-      removeSelectedCounter();
+      removeSelectedCounters();
     });
     cancelRemove.addEventListener("click", () => closeCounterDialog(removeDialog));
 
@@ -4302,6 +4672,10 @@
     resetDialog.addEventListener("close", () => {
       pendingResetKind = null;
       resetConfirmStep = 1;
+    });
+    removeDialog.addEventListener("close", () => {
+      selectedRemovalIds = new Set();
+      resetRemoveConfirmation(false);
     });
     classDialog.addEventListener("close", () => {
       selectedClassEditId = null;
