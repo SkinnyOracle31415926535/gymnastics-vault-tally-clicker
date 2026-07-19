@@ -611,7 +611,7 @@
 
     .list-table {
       width: 100%;
-      min-width: 620px;
+      min-width: 440px;
       border-collapse: collapse;
       background: var(--green);
       font-size: clamp(20px, 5vw, 30px);
@@ -657,34 +657,54 @@
       outline-offset: -5px;
     }
 
-    .list-table .is-hidden td {
-      color: #315039;
-      background: #b7cda7;
+    .list-table.editing {
+      min-width: 620px;
     }
 
-    .skill-edit-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-      min-width: 190px;
-    }
-
-    .skill-edit-actions button {
-      min-height: 35px;
-      padding: 4px 7px;
-      font-size: 15px;
-    }
-
-    .skill-edit-actions .skill-delete {
-      min-width: 38px;
-      font-size: 24px;
+    .list-table .skill-drag-handle,
+    .list-table .skill-order-button {
+      min-height: 44px;
+      padding: 6px 8px;
+      font-size: 22px;
       line-height: 1;
+    }
+
+    .list-table .skill-drag-handle {
+      cursor: grab;
+    }
+
+    .list-table .skill-drag-handle:active {
+      cursor: grabbing;
+    }
+
+    .list-table .skill-order-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      min-width: 104px;
+    }
+
+    .list-table tr.drag-over td {
+      color: var(--green);
+      background: var(--black);
+    }
+
+    .list-table tr.drag-over.drop-after td {
+      box-shadow: inset 0 -2px 0 var(--green);
+    }
+
+    .list-table tr.is-dragging {
+      opacity: 0.55;
     }
 
     .list-actions {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 8px;
+    }
+
+    #listPanel.is-editing .todo-run-only {
+      display: none;
     }
 
     .list-reset-actions {
@@ -1715,24 +1735,24 @@
       </section>
 
       <section id="listPanel" class="panel" aria-label="Skill TODO run-throughs">
-        <div class="run-current-skill" aria-live="polite">
+        <div class="run-current-skill todo-run-only" aria-live="polite">
           <div class="run-current-label">current skill</div>
           <div id="listCurrentSkill" class="run-current-name">no todo selected</div>
         </div>
 
-        <div class="run-summary" aria-live="polite">
+        <div class="run-summary todo-run-only" aria-live="polite">
           <div id="listProgressText" class="run-summary-line">0% complete</div>
           <div class="progress-track" aria-hidden="true"><div id="listProgressFill" class="progress-fill"></div></div>
         </div>
 
-        <div class="current-skill" aria-live="polite">
+        <div class="current-skill todo-run-only" aria-live="polite">
           <div id="listCurrentCount" class="current-skill-count"></div>
           <div id="listCurrentTarget" class="current-skill-target"></div>
         </div>
 
-        <div id="listSuccess" class="success-message" role="status" aria-live="polite">TODO complete! great work.</div>
+        <div id="listSuccess" class="success-message todo-run-only" role="status" aria-live="polite">TODO complete! great work.</div>
 
-        <div class="controls list-controls">
+        <div class="controls list-controls todo-run-only">
           <button id="listPlus" class="plus" type="button" aria-label="Log one repetition for the current skill">+</button>
           <button id="listMinus" class="minus" type="button" aria-label="Remove one repetition from the current skill">−</button>
           <button id="resetCurrentSkill" class="clear" type="button">reset</button>
@@ -1740,16 +1760,14 @@
 
         <div class="list-table-wrap">
           <table class="list-table">
-            <thead>
-              <tr><th scope="col">skill</th><th scope="col">reps</th><th scope="col">status</th><th scope="col">actions</th></tr>
-            </thead>
+            <thead id="listTableHead"></thead>
             <tbody id="listTableBody"></tbody>
           </table>
         </div>
 
         <div class="list-actions">
           <button id="addSkill" type="button">add skill</button>
-          <button id="removeSkill" class="remove-skill" type="button">remove skill</button>
+          <button id="editTodo" type="button" aria-pressed="false">edit</button>
         </div>
 
         <div class="list-toolbar">
@@ -2013,18 +2031,6 @@
     </form>
   </dialog>
 
-  <dialog id="removeSkillDialog" class="counter-dialog" aria-labelledby="removeSkillDialogTitle">
-    <form id="removeSkillForm" class="dialog-content">
-      <h2 id="removeSkillDialogTitle" class="dialog-title">remove skill</h2>
-      <p class="dialog-description">choose one, then confirm</p>
-      <div id="removeSkillOptions" class="remove-options" aria-label="Skills to remove"></div>
-      <div class="dialog-actions">
-        <button id="cancelRemoveSkill" type="button">cancel</button>
-        <button id="confirmRemoveSkill" class="remove-confirm" type="submit" disabled>remove selected</button>
-      </div>
-    </form>
-  </dialog>
-
   <dialog id="editSkillDialog" class="counter-dialog" aria-labelledby="editSkillDialogTitle">
     <form id="editSkillForm" class="dialog-content">
       <h2 id="editSkillDialogTitle" class="dialog-title">edit skill</h2>
@@ -2160,9 +2166,11 @@
     const listMinus = document.getElementById("listMinus");
     const resetCurrentSkill = document.getElementById("resetCurrentSkill");
     const resetTodo = document.getElementById("resetTodo");
+    const listPanel = document.getElementById("listPanel");
+    const listTableHead = document.getElementById("listTableHead");
     const listTableBody = document.getElementById("listTableBody");
     const addSkill = document.getElementById("addSkill");
-    const removeSkill = document.getElementById("removeSkill");
+    const editTodo = document.getElementById("editTodo");
     const newListDialog = document.getElementById("newListDialog");
     const newListForm = document.getElementById("newListForm");
     const newListName = document.getElementById("newListName");
@@ -2180,11 +2188,6 @@
     const addSkillName = document.getElementById("addSkillName");
     const addSkillReps = document.getElementById("addSkillReps");
     const cancelAddSkill = document.getElementById("cancelAddSkill");
-    const removeSkillDialog = document.getElementById("removeSkillDialog");
-    const removeSkillForm = document.getElementById("removeSkillForm");
-    const removeSkillOptions = document.getElementById("removeSkillOptions");
-    const confirmRemoveSkill = document.getElementById("confirmRemoveSkill");
-    const cancelRemoveSkill = document.getElementById("cancelRemoveSkill");
     const editSkillDialog = document.getElementById("editSkillDialog");
     const editSkillForm = document.getElementById("editSkillForm");
     const editSkillName = document.getElementById("editSkillName");
@@ -2216,9 +2219,10 @@
     let selectedClassEditId = null;
     let pendingResetKind = null;
     let resetConfirmStep = 1;
-    let selectedSkillRemovalId = null;
     let selectedSkillEditId = null;
     let skillFlashTimer = null;
+    let isListEditing = false;
+    let draggedSkillId = null;
     let bratKeyboardState = null;
     let bratKeyboardShifted = false;
     let bratKeyboardClosing = false;
@@ -3194,8 +3198,7 @@
     }
 
     function playIncrementDing(context, now, score) {
-      const step = ((Math.max(score, 1) - 1) % 10);
-      const startsNewTen = score > 1 && step === 0;
+      const step = Math.min(19, Math.max(score, 1) - 1);
       const baseFrequency = 520;
       const frequency = baseFrequency * Math.pow(2, step / 12);
       const overtoneFrequency = frequency * 2.01;
@@ -3227,50 +3230,6 @@
       bell.stop(now + 0.44);
       shine.stop(now + 0.24);
 
-      if (startsNewTen) {
-        // The regular click supplies the root; this short major arpeggio is
-        // a clear little level-up fanfare instead of a reset sound.
-        const cheerOne = context.createOscillator();
-        const cheerTwo = context.createOscillator();
-        const cheerThree = context.createOscillator();
-        const cheerOneGain = context.createGain();
-        const cheerTwoGain = context.createGain();
-        const cheerThreeGain = context.createGain();
-        const cueStart = now + 0.012;
-        const secondNoteStart = cueStart + 0.06;
-        const thirdNoteStart = cueStart + 0.12;
-
-        cheerOne.type = "triangle";
-        cheerTwo.type = "sine";
-        cheerThree.type = "sine";
-        cheerOne.frequency.setValueAtTime(659.25, cueStart);
-        cheerTwo.frequency.setValueAtTime(783.99, secondNoteStart);
-        cheerThree.frequency.setValueAtTime(1046.5, thirdNoteStart);
-
-        cheerOneGain.gain.setValueAtTime(0.0001, cueStart);
-        cheerOneGain.gain.exponentialRampToValueAtTime(0.115, cueStart + 0.004);
-        cheerOneGain.gain.exponentialRampToValueAtTime(0.0001, cueStart + 0.105);
-        cheerTwoGain.gain.setValueAtTime(0.0001, secondNoteStart);
-        cheerTwoGain.gain.exponentialRampToValueAtTime(0.1, secondNoteStart + 0.004);
-        cheerTwoGain.gain.exponentialRampToValueAtTime(0.0001, secondNoteStart + 0.13);
-        cheerThreeGain.gain.setValueAtTime(0.0001, thirdNoteStart);
-        cheerThreeGain.gain.exponentialRampToValueAtTime(0.09, thirdNoteStart + 0.004);
-        cheerThreeGain.gain.exponentialRampToValueAtTime(0.0001, thirdNoteStart + 0.18);
-
-        cheerOne.connect(cheerOneGain);
-        cheerTwo.connect(cheerTwoGain);
-        cheerThree.connect(cheerThreeGain);
-        cheerOneGain.connect(context.destination);
-        cheerTwoGain.connect(context.destination);
-        cheerThreeGain.connect(context.destination);
-
-        cheerOne.start(cueStart);
-        cheerTwo.start(secondNoteStart);
-        cheerThree.start(thirdNoteStart);
-        cheerOne.stop(cueStart + 0.115);
-        cheerTwo.stop(secondNoteStart + 0.14);
-        cheerThree.stop(thirdNoteStart + 0.19);
-      }
     }
 
     function playMinusSound(context, now) {
@@ -3733,13 +3692,114 @@
       showMultipleLeader.checked = state.showMultipleLeader;
     }
 
-    function addListTableMessage(message) {
+    function addListTableMessage(message, columnCount = 3) {
       const row = document.createElement("tr");
       const cell = document.createElement("td");
-      cell.colSpan = 4;
+      cell.colSpan = columnCount;
       cell.className = "list-empty";
       cell.textContent = message;
       row.appendChild(cell);
+      listTableBody.appendChild(row);
+    }
+
+    function setListEditing(editing) {
+      if (editing && !getSelectedList()) {
+        statusbar.textContent = "make a TODO first";
+        return;
+      }
+      isListEditing = editing;
+      draggedSkillId = null;
+      renderList();
+      statusbar.textContent = editing ? "reorder skills" : "TODO ready";
+    }
+
+    function moveSkillRelative(sourceId, targetId, insertAfter) {
+      if (sourceId === targetId) return;
+      const list = getSelectedList();
+      const sourceIndex = list?.skills.findIndex((skill) => skill.id === sourceId) ?? -1;
+      const targetIndex = list?.skills.findIndex((skill) => skill.id === targetId) ?? -1;
+      if (!list || sourceIndex < 0 || targetIndex < 0) return;
+
+      const [movedSkill] = list.skills.splice(sourceIndex, 1);
+      const nextTargetIndex = list.skills.findIndex((skill) => skill.id === targetId);
+      list.skills.splice(nextTargetIndex + (insertAfter ? 1 : 0), 0, movedSkill);
+      saveState();
+      renderList();
+      statusbar.textContent = movedSkill.name + " moved";
+    }
+
+    function moveSkillByOffset(skillId, direction) {
+      const list = getSelectedList();
+      const index = list?.skills.findIndex((skill) => skill.id === skillId) ?? -1;
+      const target = list?.skills[index + direction];
+      if (!list || index < 0 || !target) return;
+      moveSkillRelative(skillId, target.id, direction > 0);
+    }
+
+    function appendReorderSkillRow(skill, index, skills) {
+      const row = document.createElement("tr");
+      row.classList.toggle("is-current", getCurrentSkill(getSelectedList())?.id === skill.id);
+      row.classList.toggle("is-complete", skill.completed >= skill.reps);
+
+      const move = document.createElement("td");
+      const dragHandle = document.createElement("button");
+      dragHandle.type = "button";
+      dragHandle.className = "skill-drag-handle";
+      dragHandle.textContent = "↕";
+      dragHandle.draggable = true;
+      dragHandle.setAttribute("aria-label", "Drag " + skill.name + " to move it");
+      dragHandle.addEventListener("dragstart", (event) => {
+        draggedSkillId = skill.id;
+        row.classList.add("is-dragging");
+        event.dataTransfer?.setData("text/plain", skill.id);
+      });
+      dragHandle.addEventListener("dragend", () => {
+        draggedSkillId = null;
+        row.classList.remove("is-dragging");
+        Array.from(listTableBody.children).forEach((item) => item.classList.remove("drag-over", "drop-after"));
+      });
+      move.appendChild(dragHandle);
+
+      row.addEventListener("dragover", (event) => {
+        if (!draggedSkillId || draggedSkillId === skill.id) return;
+        event.preventDefault();
+        const bounds = row.getBoundingClientRect();
+        row.classList.add("drag-over");
+        row.classList.toggle("drop-after", event.clientY > bounds.top + bounds.height / 2);
+      });
+      row.addEventListener("dragleave", () => row.classList.remove("drag-over", "drop-after"));
+      row.addEventListener("drop", (event) => {
+        event.preventDefault();
+        const sourceId = event.dataTransfer?.getData("text/plain") || draggedSkillId;
+        const bounds = row.getBoundingClientRect();
+        row.classList.remove("drag-over", "drop-after");
+        if (sourceId) moveSkillRelative(sourceId, skill.id, event.clientY > bounds.top + bounds.height / 2);
+        draggedSkillId = null;
+      });
+
+      const name = document.createElement("td");
+      name.textContent = skill.name;
+      const reps = document.createElement("td");
+      reps.className = "skill-progress";
+      reps.textContent = skill.completed + " / " + skill.reps;
+      const order = document.createElement("td");
+      const actions = document.createElement("div");
+      actions.className = "skill-order-actions";
+      [
+        ["↑", -1, "up"],
+        ["↓", 1, "down"]
+      ].forEach(([label, direction, directionName]) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "skill-order-button";
+        button.textContent = label;
+        button.disabled = direction < 0 ? index === 0 : index === skills.length - 1;
+        button.setAttribute("aria-label", "Move " + skill.name + " " + directionName);
+        button.addEventListener("click", () => moveSkillByOffset(skill.id, direction));
+        actions.appendChild(button);
+      });
+      order.appendChild(actions);
+      row.append(move, name, reps, order);
       listTableBody.appendChild(row);
     }
 
@@ -3751,6 +3811,15 @@
       const currentSkill = getCurrentSkill(list);
       const stats = getListStats(list);
       const isComplete = activeSkills.length > 0 && !currentSkill;
+
+      if (!hasList) {
+        isListEditing = false;
+        draggedSkillId = null;
+      }
+      listPanel.classList.toggle("is-editing", isListEditing);
+      editTodo.disabled = !hasList;
+      editTodo.textContent = isListEditing ? "done" : "edit";
+      editTodo.setAttribute("aria-pressed", isListEditing ? "true" : "false");
 
       listSelector.innerHTML = "";
       if (!state.lists.length) {
@@ -3771,7 +3840,6 @@
       renameList.disabled = !hasList;
       deleteList.disabled = !hasList;
       addSkill.disabled = !hasList;
-      removeSkill.disabled = !hasSkills;
       listPlus.disabled = !currentSkill;
       listMinus.disabled = !currentSkill || currentSkill.completed === 0;
       resetCurrentSkill.disabled = !currentSkill || currentSkill.completed === 0;
@@ -3808,24 +3876,38 @@
       listSuccess.classList.toggle("active", isComplete);
       listSuccess.textContent = hasList ? list.name + " TODO complete! great work." : "TODO complete! great work.";
 
+      listTableHead.innerHTML = "";
+      const headerRow = document.createElement("tr");
+      (isListEditing ? ["move", "skill", "reps", "order"] : ["skill", "reps", "status"]).forEach((label) => {
+        const heading = document.createElement("th");
+        heading.scope = "col";
+        heading.textContent = label;
+        headerRow.appendChild(heading);
+      });
+      listTableHead.appendChild(headerRow);
+      listTableHead.parentElement.classList.toggle("editing", isListEditing);
+
       listTableBody.innerHTML = "";
+      const columnCount = isListEditing ? 4 : 3;
       if (!hasList) {
-        addListTableMessage("create a TODO to begin");
+        addListTableMessage("create a TODO to begin", columnCount);
         return;
       }
       if (!hasSkills) {
-        addListTableMessage("add the first skill for " + list.name);
+        addListTableMessage("add the first skill for " + list.name, columnCount);
         return;
       }
 
-      list.skills.forEach((skill) => {
+      list.skills.forEach((skill, index) => {
+        if (isListEditing) {
+          appendReorderSkillRow(skill, index, list.skills);
+          return;
+        }
         const row = document.createElement("tr");
         const isCurrent = currentSkill?.id === skill.id;
         const isSkillComplete = skill.completed >= skill.reps;
-        const isHidden = skill.hidden === true;
         row.classList.toggle("is-current", isCurrent);
         row.classList.toggle("is-complete", isSkillComplete);
-        row.classList.toggle("is-hidden", isHidden);
 
         const name = document.createElement("td");
         name.className = "skill-editable";
@@ -3846,32 +3928,8 @@
         bindSkillEditTrigger(reps, () => openSkillEditDialog(skill.id, "reps"));
 
         const status = document.createElement("td");
-        status.textContent = isHidden ? "hidden" : isSkillComplete ? "complete" : isCurrent ? "current" : "up next";
-
-        const actions = document.createElement("td");
-        actions.className = "skill-edit-actions";
-
-        const edit = document.createElement("button");
-        edit.type = "button";
-        edit.textContent = "edit";
-        edit.setAttribute("aria-label", "Edit " + skill.name);
-        edit.addEventListener("click", () => openSkillEditDialog(skill.id, "name"));
-
-        const hide = document.createElement("button");
-        hide.type = "button";
-        hide.textContent = isHidden ? "show" : "hide";
-        hide.setAttribute("aria-label", (isHidden ? "Show " : "Hide ") + skill.name + " in this TODO");
-        hide.addEventListener("click", () => toggleSkillHidden(skill.id));
-
-        const remove = document.createElement("button");
-        remove.type = "button";
-        remove.className = "remove-confirm skill-delete";
-        remove.textContent = "×";
-        remove.setAttribute("aria-label", "Delete " + skill.name);
-        remove.addEventListener("click", () => deleteSkillById(skill.id));
-
-        actions.append(edit, hide, remove);
-        row.append(name, reps, status, actions);
+        status.textContent = skill.hidden ? "hidden" : isSkillComplete ? "complete" : isCurrent ? "current" : "up next";
+        row.append(name, reps, status);
         listTableBody.appendChild(row);
       });
     }
@@ -3960,31 +4018,6 @@
       renderList();
       statusbar.textContent = name + " updated";
       return true;
-    }
-
-    function toggleSkillHidden(skillId) {
-      const skill = getSkillById(skillId);
-      if (!skill) return;
-      skill.hidden = !skill.hidden;
-      saveState();
-      renderList();
-      statusbar.textContent = skill.name + (skill.hidden ? " hidden from this TODO" : " returned to this TODO");
-    }
-
-    function deleteSkillById(skillId) {
-      const list = getSelectedList();
-      const skill = getSkillById(skillId);
-      if (!list || !skill) return;
-      if (!window.confirm("Delete " + skill.name + "?")) return;
-
-      list.skills = list.skills.filter((item) => item.id !== skill.id);
-      if (selectedSkillEditId === skill.id) {
-        selectedSkillEditId = null;
-        closeCounterDialog(editSkillDialog);
-      }
-      saveState();
-      renderList();
-      statusbar.textContent = skill.name + " deleted";
     }
 
     function render() {
@@ -4316,6 +4349,7 @@
       const list = { id: makeId("list"), name, skills: [] };
       state.lists.push(list);
       state.selectedListId = list.id;
+      isListEditing = false;
       saveState();
       renderList();
       statusbar.textContent = name + " TODO created";
@@ -4368,6 +4402,7 @@
 
       state.lists = state.lists.filter((item) => item.id !== list.id);
       state.selectedListId = state.lists[0]?.id || null;
+      isListEditing = false;
       saveState();
       renderList();
       closeCounterDialog(deleteListDialog);
@@ -4481,59 +4516,6 @@
       statusbar.textContent = list.name + " reset";
     }
 
-    function renderRemoveSkillOptions() {
-      const list = getSelectedList();
-      removeSkillOptions.innerHTML = "";
-      if (!list) return;
-
-      list.skills.forEach((skill) => {
-        const option = document.createElement("button");
-        const selected = skill.id === selectedSkillRemovalId;
-        option.type = "button";
-        option.className = "remove-option";
-        option.textContent = skill.name + ": " + skill.completed + " / " + skill.reps;
-        option.setAttribute("aria-pressed", selected ? "true" : "false");
-        option.setAttribute("aria-label", "Select " + skill.name + " to remove");
-        option.addEventListener("click", () => {
-          selectedSkillRemovalId = skill.id;
-          renderRemoveSkillOptions();
-          const selectedOption = Array.from(removeSkillOptions.children).find((button) => button.getAttribute("aria-pressed") === "true");
-          if (selectedOption) selectedOption.focus();
-        });
-        removeSkillOptions.appendChild(option);
-      });
-
-      confirmRemoveSkill.disabled = !selectedSkillRemovalId;
-    }
-
-    function openRemoveSkillDialog() {
-      const list = getSelectedList();
-      if (!list?.skills.length) {
-        statusbar.textContent = "no skills to remove";
-        return;
-      }
-      selectedSkillRemovalId = null;
-      renderRemoveSkillOptions();
-      openCounterDialog(removeSkillDialog);
-    }
-
-    function removeSelectedSkill() {
-      const list = getSelectedList();
-      const skill = list?.skills.find((item) => item.id === selectedSkillRemovalId);
-      if (!list || !skill) {
-        statusbar.textContent = "choose a skill first";
-        renderRemoveSkillOptions();
-        return;
-      }
-
-      list.skills = list.skills.filter((item) => item.id !== skill.id);
-      selectedSkillRemovalId = null;
-      saveState();
-      renderList();
-      closeCounterDialog(removeSkillDialog);
-      statusbar.textContent = skill.name + " removed";
-    }
-
     menuToggle.addEventListener("click", () => {
       setMenuOpen(!modeMenu.classList.contains("open"));
     });
@@ -4564,6 +4546,7 @@
     listSelector.addEventListener("change", () => {
       if (!state.lists.some((list) => list.id === listSelector.value)) return;
       state.selectedListId = listSelector.value;
+      isListEditing = false;
       saveState();
       renderList();
       statusbar.textContent = getSelectedList().name + " selected";
@@ -4572,7 +4555,7 @@
     renameList.addEventListener("click", openRenameListDialog);
     deleteList.addEventListener("click", openDeleteListDialog);
     addSkill.addEventListener("click", openAddSkillDialog);
-    removeSkill.addEventListener("click", openRemoveSkillDialog);
+    editTodo.addEventListener("click", () => setListEditing(!isListEditing));
     listPlus.addEventListener("click", () => changeCurrentSkill(1));
     listMinus.addEventListener("click", () => changeCurrentSkill(-1));
     resetCurrentSkill.addEventListener("click", resetCurrentSkillProgress);
@@ -4630,19 +4613,13 @@
     });
     cancelAddSkill.addEventListener("click", () => closeCounterDialog(addSkillDialog));
 
-    removeSkillForm.addEventListener("submit", (event) => {
-      event.preventDefault();
-      removeSelectedSkill();
-    });
-    cancelRemoveSkill.addEventListener("click", () => closeCounterDialog(removeSkillDialog));
-
     editSkillForm.addEventListener("submit", (event) => {
       event.preventDefault();
       if (saveEditedSkill()) closeCounterDialog(editSkillDialog);
     });
     cancelEditSkill.addEventListener("click", () => closeCounterDialog(editSkillDialog));
 
-    [addDialog, removeDialog, classDialog, classPickerDialog, resetDialog, newListDialog, renameListDialog, deleteListDialog, addSkillDialog, removeSkillDialog, editSkillDialog].forEach((dialog) => {
+    [addDialog, removeDialog, classDialog, classPickerDialog, resetDialog, newListDialog, renameListDialog, deleteListDialog, addSkillDialog, editSkillDialog].forEach((dialog) => {
       dialog.addEventListener("close", () => {
         if (bratKeyboardHost === dialog) finishBratKeyboard("cleanup");
         restoreDialogFocus(dialog);
@@ -5069,7 +5046,7 @@
       }
 
       function pointBaseFrequency(pointNumber) {
-        const step = Math.min(18, Math.max(0, pointNumber - 1));
+        const step = Math.min(19, Math.max(0, pointNumber - 1));
         return 520 * Math.pow(2, step / 12);
       }
 
