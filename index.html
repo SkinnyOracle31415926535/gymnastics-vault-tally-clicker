@@ -888,12 +888,6 @@
       background: rgba(5, 5, 5, 0.58);
     }
 
-    body.brat-keyboard-open .counter-dialog[open] {
-      max-height: 44dvh;
-      margin-block: max(6px, env(safe-area-inset-top)) auto;
-      overflow: auto;
-    }
-
     .dialog-content {
       display: grid;
       gap: 14px;
@@ -1180,13 +1174,41 @@
       caret-color: transparent;
     }
 
-    .brat-keyboard-dialog {
+    [data-brat-keyboard].brat-keyboard-active {
+      outline: 4px solid var(--black);
+      outline-offset: 2px;
+      caret-color: var(--black);
+    }
+
+    body.brat-keyboard-open {
+      scroll-padding-bottom: calc(var(--brat-keyboard-height, 0px) + 12px);
+    }
+
+    body.brat-keyboard-body-host .window {
+      margin-bottom: var(--brat-keyboard-height, 0px);
+    }
+
+    .counter-dialog.keyboard-host {
+      max-height: calc(100dvh - var(--brat-keyboard-height, 0px) - 12px);
+      margin-block: max(6px, env(safe-area-inset-top)) auto;
+      overflow: visible;
+    }
+
+    .counter-dialog.keyboard-host > .dialog-content {
+      max-height: calc(100dvh - var(--brat-keyboard-height, 0px) - 12px);
+      overflow: auto;
+      overscroll-behavior: contain;
+      scroll-padding-block: 12px;
+    }
+
+    .brat-keyboard-dock {
       position: fixed;
-      inset: auto 0 0;
-      width: min(760px, 100%);
-      max-width: none;
-      max-height: min(100dvh, 640px);
-      margin: 0 auto;
+      z-index: 2147483000;
+      left: 50%;
+      bottom: 0;
+      width: min(760px, 100vw);
+      max-height: 100dvh;
+      margin: 0;
       padding: 0;
       overflow: auto;
       color: var(--black);
@@ -1194,20 +1216,23 @@
       border: 0;
       font-family: var(--brat-font);
       outline: none;
+      transform: translateX(-50%);
     }
 
-    .brat-keyboard-dialog::backdrop {
-      background: rgba(5, 5, 5, 0.36);
+    .counter-dialog.keyboard-host > .brat-keyboard-dock {
+      bottom: auto;
+      filter: none;
     }
 
-    .brat-keyboard-dialog [hidden] {
+    .brat-keyboard-dock[hidden],
+    .brat-keyboard-dock [hidden] {
       display: none !important;
     }
 
     .brat-keyboard-shell {
       display: grid;
-      gap: 7px;
-      padding: 9px 9px calc(9px + env(safe-area-inset-bottom));
+      gap: 5px;
+      padding: 7px 7px calc(7px + env(safe-area-inset-bottom));
       background: var(--green);
       border: 4px solid var(--black);
     }
@@ -1232,40 +1257,14 @@
 
     .brat-keyboard-status {
       min-height: 18px;
+      overflow: hidden;
       font-size: 15px;
       font-weight: 500;
       line-height: 1;
       text-align: right;
       text-transform: lowercase;
-    }
-
-    .brat-keyboard-display {
-      min-height: 66px;
-      max-height: 118px;
-      overflow: auto;
-      padding: 9px 10px;
-      color: var(--green);
-      background: var(--black);
-      border: 4px solid var(--black);
-      font-size: clamp(24px, 6vw, 34px);
-      font-weight: 500;
-      line-height: 1.05;
-      overflow-wrap: anywhere;
-      white-space: pre-wrap;
-    }
-
-    .brat-keyboard-caret {
-      display: inline-block;
-      width: 3px;
-      height: 0.9em;
-      margin: 0 1px;
-      vertical-align: -0.08em;
-      background: var(--green);
-    }
-
-    .brat-keyboard-selection {
-      color: var(--black);
-      background: var(--green);
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .brat-keyboard-text,
@@ -1294,14 +1293,18 @@
     }
 
     .brat-keyboard-control-row {
-      grid-template-columns: repeat(4, minmax(0, 0.7fr)) minmax(90px, 3fr) minmax(0, 1.2fr);
+      display: flex;
+    }
+
+    .brat-keyboard-control-row button {
+      flex: 1 1 0;
     }
 
     .brat-keyboard-row button,
     .brat-keyboard-numeric button,
     .brat-keyboard-actions button {
       min-width: 0;
-      min-height: 46px;
+      min-height: 42px;
       padding: 4px 2px;
       border-width: 3px;
       font-size: clamp(17px, 4vw, 25px);
@@ -1315,6 +1318,7 @@
     }
 
     .brat-keyboard-space {
+      flex-grow: 4 !important;
       font-size: 18px !important;
     }
 
@@ -1330,12 +1334,12 @@
     }
 
     .brat-keyboard-actions {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      display: flex;
       gap: 5px;
     }
 
     .brat-keyboard-actions button {
+      flex: 1 1 0;
       font-size: clamp(18px, 4.5vw, 27px);
     }
 
@@ -1475,7 +1479,7 @@
 
     .window,
     .counter-dialog,
-    .brat-keyboard-dialog,
+    .brat-keyboard-dock,
     .skill-flash,
     .celebration,
     .streak-celebration,
@@ -1485,7 +1489,7 @@
 
     .window *,
     .counter-dialog *,
-    .brat-keyboard-dialog *,
+    .brat-keyboard-dock *,
     .skill-flash *,
     .celebration *,
     .streak-celebration * {
@@ -1576,25 +1580,29 @@
         font-size: 16px;
       }
 
-      .brat-keyboard-control-row {
-        grid-template-columns: repeat(4, minmax(0, 0.8fr)) minmax(72px, 2.6fr) minmax(0, 1.25fr);
+      #bratKeyboardEnter {
+        flex-grow: 1.7;
+        font-size: 14px;
       }
     }
 
     @media (max-height: 560px) {
-      .brat-keyboard-display {
-        min-height: 45px;
-        max-height: 64px;
-        font-size: 22px;
+      .brat-keyboard-shell {
+        gap: 3px;
+        padding-top: 4px;
       }
 
       .brat-keyboard-row button,
       .brat-keyboard-actions button {
-        min-height: 38px;
+        min-height: 34px;
+        padding-block: 1px;
+        font-size: 17px;
       }
 
       .brat-keyboard-numeric button {
-        min-height: 46px;
+        min-height: 40px;
+        padding-block: 1px;
+        font-size: 22px;
       }
     }
   </style>
@@ -1869,13 +1877,12 @@
     </form>
   </dialog>
 
-  <dialog id="bratKeyboardDialog" class="brat-keyboard-dialog" aria-modal="true" aria-labelledby="bratKeyboardLabel" tabindex="-1">
+  <section id="bratKeyboardDialog" class="brat-keyboard-dock" role="dialog" aria-modal="false" aria-labelledby="bratKeyboardLabel" hidden>
     <div class="brat-keyboard-shell">
       <div class="brat-keyboard-heading">
         <div id="bratKeyboardLabel" class="brat-keyboard-label">editing</div>
         <div id="bratKeyboardStatus" class="brat-keyboard-status" role="status" aria-live="polite"></div>
       </div>
-      <div id="bratKeyboardDisplay" class="brat-keyboard-display" role="textbox" aria-readonly="true" aria-multiline="false"></div>
       <div id="bratKeyboardTextKeys" class="brat-keyboard-text" role="group" aria-label="Brat text keyboard">
         <div class="brat-keyboard-row brat-keyboard-number-row">
           <button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button><button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button><button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button><button type="button" data-key="0">0</button>
@@ -1887,23 +1894,24 @@
           <button type="button" data-letter="a">a</button><button type="button" data-letter="s">s</button><button type="button" data-letter="d">d</button><button type="button" data-letter="f">f</button><button type="button" data-letter="g">g</button><button type="button" data-letter="h">h</button><button type="button" data-letter="j">j</button><button type="button" data-letter="k">k</button><button type="button" data-letter="l">l</button>
         </div>
         <div class="brat-keyboard-row brat-keyboard-lower-row">
-          <button id="bratKeyboardShift" class="brat-keyboard-key" type="button" data-action="shift" aria-pressed="false">shift</button><button type="button" data-letter="z">z</button><button type="button" data-letter="x">x</button><button type="button" data-letter="c">c</button><button type="button" data-letter="v">v</button><button type="button" data-letter="b">b</button><button type="button" data-letter="n">n</button><button type="button" data-letter="m">m</button><button type="button" data-action="backspace" aria-label="Backspace">⌫</button>
+          <button id="bratKeyboardShift" class="brat-keyboard-key" type="button" data-action="shift" aria-pressed="false">shift</button><button type="button" data-letter="z">z</button><button type="button" data-letter="x">x</button><button type="button" data-letter="c">c</button><button type="button" data-letter="v">v</button><button type="button" data-letter="b">b</button><button type="button" data-letter="n">n</button><button type="button" data-letter="m">m</button><button type="button" data-action="backspace" data-repeatable aria-label="Backspace">⌫</button>
         </div>
         <div class="brat-keyboard-row brat-keyboard-control-row">
-          <button type="button" data-action="left" aria-label="Move cursor left">←</button><button type="button" data-action="right" aria-label="Move cursor right">→</button><button type="button" data-key="'" aria-label="Apostrophe">'</button><button type="button" data-key="-" aria-label="Hyphen">-</button><button class="brat-keyboard-space" type="button" data-key=" ">space</button><button id="bratKeyboardEnter" type="button" data-action="enter">enter</button>
+          <button type="button" data-action="left" data-repeatable aria-label="Move cursor left">←</button><button type="button" data-action="right" data-repeatable aria-label="Move cursor right">→</button><button id="bratKeyboardUp" type="button" data-action="up" data-repeatable aria-label="Move up one line" hidden>↑</button><button id="bratKeyboardDown" type="button" data-action="down" data-repeatable aria-label="Move down one line" hidden>↓</button><button type="button" data-key="'" aria-label="Apostrophe">'</button><button type="button" data-key="-" aria-label="Hyphen">-</button><button class="brat-keyboard-space" type="button" data-key=" ">space</button><button id="bratKeyboardEnter" type="button" data-action="enter" hidden>enter</button>
         </div>
       </div>
       <div id="bratKeyboardNumericKeys" class="brat-keyboard-numeric" role="group" aria-label="Brat number keyboard" hidden>
-        <button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button><button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button><button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button><button type="button" data-action="backspace" aria-label="Backspace">⌫</button><button type="button" data-key="0">0</button><button type="button" data-action="clear">clear</button>
+        <button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button><button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button><button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button><button type="button" data-action="backspace" data-repeatable aria-label="Backspace">⌫</button><button type="button" data-key="0">0</button><button type="button" data-action="clear">clear</button>
       </div>
       <div class="brat-keyboard-actions">
         <button id="bratKeyboardCancel" type="button">cancel</button>
-        <button id="bratKeyboardPaste" type="button">paste</button>
+        <button id="bratKeyboardPaste" type="button" hidden>paste</button>
         <button id="bratKeyboardClear" type="button">clear</button>
+        <button id="bratKeyboardNext" type="button" hidden>next</button>
         <button id="bratKeyboardCommit" class="brat-keyboard-commit" type="button">done</button>
       </div>
     </div>
-  </dialog>
+  </section>
 
   <dialog id="newListDialog" class="counter-dialog" aria-labelledby="newListDialogTitle">
     <form id="newListForm" class="dialog-content">
@@ -2074,14 +2082,16 @@
     const bratKeyboardDialog = document.getElementById("bratKeyboardDialog");
     const bratKeyboardLabel = document.getElementById("bratKeyboardLabel");
     const bratKeyboardStatus = document.getElementById("bratKeyboardStatus");
-    const bratKeyboardDisplay = document.getElementById("bratKeyboardDisplay");
     const bratKeyboardTextKeys = document.getElementById("bratKeyboardTextKeys");
     const bratKeyboardNumericKeys = document.getElementById("bratKeyboardNumericKeys");
     const bratKeyboardShift = document.getElementById("bratKeyboardShift");
     const bratKeyboardEnter = document.getElementById("bratKeyboardEnter");
+    const bratKeyboardUp = document.getElementById("bratKeyboardUp");
+    const bratKeyboardDown = document.getElementById("bratKeyboardDown");
     const bratKeyboardCancel = document.getElementById("bratKeyboardCancel");
     const bratKeyboardPaste = document.getElementById("bratKeyboardPaste");
     const bratKeyboardClear = document.getElementById("bratKeyboardClear");
+    const bratKeyboardNext = document.getElementById("bratKeyboardNext");
     const bratKeyboardCommit = document.getElementById("bratKeyboardCommit");
     const listSelector = document.getElementById("listSelector");
     const newList = document.getElementById("newList");
@@ -2155,6 +2165,10 @@
     let bratKeyboardState = null;
     let bratKeyboardShifted = false;
     let bratKeyboardClosing = false;
+    let bratKeyboardHost = null;
+    let bratKeyboardRepeatDelay = null;
+    let bratKeyboardRepeatTimer = null;
+    let bratKeyboardRepeatedButton = null;
     const dialogFocus = new WeakMap();
 
     function makeId(prefix) {
@@ -2187,7 +2201,10 @@
       const minValue = overrides.min ?? (target?.min !== "" ? Number(target?.min) : null);
       const maxValue = overrides.max ?? (target?.max !== "" ? Number(target?.max) : null);
       const targetMaxLength = Number(target?.maxLength);
-      const maxLength = overrides.maxLength ?? (targetMaxLength > 0 ? targetMaxLength : Infinity);
+      let maxLength = overrides.maxLength ?? (targetMaxLength > 0 ? targetMaxLength : Infinity);
+      if (mode === "numeric" && !Number.isFinite(maxLength) && Number.isFinite(Number(maxValue))) {
+        maxLength = String(Math.max(0, Math.trunc(Number(maxValue)))).length;
+      }
       const nextId = overrides.nextId || target?.dataset.keyboardNext;
 
       return {
@@ -2203,16 +2220,19 @@
         max: Number.isFinite(Number(maxValue)) ? Number(maxValue) : null,
         maxLength,
         nextTarget: overrides.nextTarget || (nextId ? document.getElementById(nextId) : null),
+        isFormField: overrides.isFormField ?? Boolean(target?.closest?.("form")),
         dispatchChange: overrides.dispatchChange !== false,
+        onDraft: overrides.onDraft || null,
         onCommit: overrides.onCommit || null,
         onCancel: overrides.onCancel || null,
-        message: ""
+        message: "",
+        showValidation: false
       };
     }
 
-    function validateBratKeyboardState() {
-      if (!bratKeyboardState) return "nothing to edit";
-      const { value, mode, required, min, max } = bratKeyboardState;
+    function validateBratKeyboardState(state = bratKeyboardState) {
+      if (!state) return "nothing to edit";
+      const { value, mode, required, min, max } = state;
 
       if (required && !value.trim()) return "type something first";
       if (mode !== "numeric") return "";
@@ -2225,55 +2245,143 @@
       return "";
     }
 
+    function syncBratKeyboardDraft(state = bratKeyboardState, dispatchInput = true) {
+      if (!state) return;
+      const target = state.target;
+      if (target && "value" in target) {
+        target.value = state.value;
+        if (target === document.activeElement && typeof target.setSelectionRange === "function" && typeof target.selectionStart === "number") {
+          target.setSelectionRange(state.selectionStart, state.selectionEnd);
+        }
+        if (dispatchInput && state.dispatchChange) target.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      if (state.onDraft) state.onDraft(state.value);
+    }
+
+    function syncBratKeyboardSelectionFromTarget(target) {
+      if (!bratKeyboardState || bratKeyboardState.target !== target || typeof target.selectionStart !== "number") return;
+      bratKeyboardState.selectionStart = Math.max(0, Math.min(bratKeyboardState.value.length, target.selectionStart));
+      bratKeyboardState.selectionEnd = Math.max(bratKeyboardState.selectionStart, Math.min(bratKeyboardState.value.length, target.selectionEnd));
+    }
+
     function renderBratKeyboard() {
       if (!bratKeyboardState) return;
-      const { value, selectionStart, selectionEnd, mode, label, nextTarget, message } = bratKeyboardState;
-      const validationMessage = validateBratKeyboardState();
+      const { mode, label, nextTarget, message, showValidation, isFormField } = bratKeyboardState;
       bratKeyboardLabel.textContent = label;
-      bratKeyboardStatus.textContent = message || validationMessage;
-      bratKeyboardCommit.disabled = Boolean(validationMessage);
-      bratKeyboardCommit.textContent = nextTarget ? "next" : "done";
+      bratKeyboardStatus.textContent = message || (showValidation ? validateBratKeyboardState() : "");
       bratKeyboardTextKeys.hidden = mode === "numeric";
       bratKeyboardNumericKeys.hidden = mode !== "numeric";
       bratKeyboardEnter.hidden = mode !== "multiline";
-      bratKeyboardDisplay.setAttribute("aria-multiline", String(mode === "multiline"));
-      bratKeyboardDisplay.setAttribute("aria-label", `${label}: ${value || "blank"}`);
+      bratKeyboardUp.hidden = mode !== "multiline";
+      bratKeyboardDown.hidden = mode !== "multiline";
+      bratKeyboardPaste.hidden = mode !== "multiline";
+      bratKeyboardClear.hidden = mode === "numeric";
+      bratKeyboardNext.hidden = !nextTarget?.isConnected;
+      bratKeyboardCancel.textContent = isFormField ? "hide" : "cancel";
       bratKeyboardShift.classList.toggle("active", bratKeyboardShifted);
       bratKeyboardShift.setAttribute("aria-pressed", String(bratKeyboardShifted));
       document.querySelectorAll("[data-letter]").forEach((button) => {
         button.textContent = bratKeyboardShifted ? button.dataset.letter.toUpperCase() : button.dataset.letter;
       });
+    }
 
-      const before = document.createTextNode(value.slice(0, selectionStart));
-      const after = document.createTextNode(value.slice(selectionEnd));
-      if (selectionStart === selectionEnd) {
-        const caret = document.createElement("span");
-        caret.className = "brat-keyboard-caret";
-        caret.setAttribute("aria-hidden", "true");
-        bratKeyboardDisplay.replaceChildren(before, caret, after);
-        window.requestAnimationFrame(() => caret.scrollIntoView({ block: "nearest", inline: "nearest" }));
+    function getBratKeyboardHost(target) {
+      return target?.closest?.(".counter-dialog[open]") || document.body;
+    }
+
+    function scrollBratKeyboardTargetIntoView() {
+      const target = bratKeyboardState?.target;
+      if (!target?.isConnected) return;
+      target.scrollIntoView({ block: "nearest", inline: "nearest" });
+      window.requestAnimationFrame(() => {
+        if (!bratKeyboardState || bratKeyboardState.target !== target) return;
+        const targetRect = target.getBoundingClientRect();
+        const dockRect = bratKeyboardDialog.getBoundingClientRect();
+        const overlap = targetRect.bottom - dockRect.top + 10;
+        const upperGap = 8 - targetRect.top;
+        const dialogScroller = bratKeyboardHost !== document.body ? target.closest(".dialog-content") : null;
+
+        if (overlap > 0) {
+          if (dialogScroller) dialogScroller.scrollTop += overlap;
+          else window.scrollBy({ top: overlap, behavior: "auto" });
+        } else if (upperGap > 0) {
+          if (dialogScroller) dialogScroller.scrollTop -= upperGap;
+          else window.scrollBy({ top: -upperGap, behavior: "auto" });
+        }
+      });
+    }
+
+    function positionBratKeyboardDock() {
+      if (!bratKeyboardState || bratKeyboardDialog.hidden) return;
+      const height = Math.ceil(bratKeyboardDialog.getBoundingClientRect().height);
+      document.body.style.setProperty("--brat-keyboard-height", height + "px");
+      bratKeyboardHost?.style?.setProperty("--brat-keyboard-height", height + "px");
+
+      if (bratKeyboardHost && bratKeyboardHost !== document.body) {
+        const hostRect = bratKeyboardHost.getBoundingClientRect();
+        bratKeyboardDialog.style.left = window.innerWidth / 2 - hostRect.left - bratKeyboardHost.clientLeft + "px";
+        bratKeyboardDialog.style.top = window.innerHeight - height - hostRect.top - bratKeyboardHost.clientTop + "px";
+        bratKeyboardDialog.style.bottom = "auto";
       } else {
-        const selection = document.createElement("span");
-        selection.className = "brat-keyboard-selection";
-        selection.textContent = value.slice(selectionStart, selectionEnd);
-        bratKeyboardDisplay.replaceChildren(before, selection, after);
+        bratKeyboardDialog.style.left = "50%";
+        bratKeyboardDialog.style.top = "auto";
+        bratKeyboardDialog.style.bottom = "0";
       }
     }
 
+    const bratKeyboardResizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(() => {
+      positionBratKeyboardDock();
+    }) : null;
+
+    function attachBratKeyboardDock(target) {
+      bratKeyboardHost = getBratKeyboardHost(target);
+      bratKeyboardHost.appendChild(bratKeyboardDialog);
+      bratKeyboardHost.classList?.add("keyboard-host");
+      document.body.classList.toggle("brat-keyboard-body-host", bratKeyboardHost === document.body);
+      bratKeyboardDialog.hidden = false;
+      bratKeyboardResizeObserver?.observe(bratKeyboardDialog);
+      positionBratKeyboardDock();
+      window.requestAnimationFrame(() => {
+        positionBratKeyboardDock();
+        scrollBratKeyboardTargetIntoView();
+      });
+    }
+
+    function detachBratKeyboardDock() {
+      bratKeyboardResizeObserver?.unobserve(bratKeyboardDialog);
+      bratKeyboardHost?.classList?.remove("keyboard-host");
+      bratKeyboardHost?.style?.removeProperty("--brat-keyboard-height");
+      document.body.classList.remove("brat-keyboard-open", "brat-keyboard-body-host");
+      document.body.style.removeProperty("--brat-keyboard-height");
+      bratKeyboardDialog.hidden = true;
+      bratKeyboardDialog.style.removeProperty("left");
+      bratKeyboardDialog.style.removeProperty("top");
+      bratKeyboardDialog.style.removeProperty("bottom");
+      if (bratKeyboardDialog.parentElement !== document.body) document.body.appendChild(bratKeyboardDialog);
+      bratKeyboardHost = null;
+    }
+
     function openBratKeyboard(target, overrides = {}) {
-      if (bratKeyboardState?.target) bratKeyboardState.target.setAttribute("aria-expanded", "false");
+      if (!target) return;
+      if (bratKeyboardState?.target === target) {
+        window.requestAnimationFrame(() => {
+          syncBratKeyboardSelectionFromTarget(target);
+          renderBratKeyboard();
+        });
+        return;
+      }
+      if (bratKeyboardState) finishBratKeyboard(bratKeyboardState.isFormField ? "hide" : "cancel");
+
+      bratKeyboardClosing = false;
       bratKeyboardState = makeBratKeyboardState(target, overrides);
       bratKeyboardShifted = false;
       document.body.classList.add("brat-keyboard-open");
-      if (target) {
-        target.setAttribute("aria-expanded", "true");
-      }
+      target.classList?.add("brat-keyboard-active");
+      target.setAttribute("aria-expanded", "true");
+      target.focus?.({ preventScroll: true });
+      syncBratKeyboardDraft(bratKeyboardState, false);
       renderBratKeyboard();
-      if (!bratKeyboardDialog.open) bratKeyboardDialog.showModal();
-      window.requestAnimationFrame(() => {
-        if (target) target.scrollIntoView({ block: "center", inline: "nearest" });
-        bratKeyboardDialog.focus();
-      });
+      attachBratKeyboardDock(target);
     }
 
     function setBratKeyboardMessage(message) {
@@ -2290,7 +2398,8 @@
         setBratKeyboardMessage("numbers only");
         return;
       }
-      if (state.mode !== "multiline") insertion = insertion.replace(/\r?\n/g, " ");
+      if (state.mode === "multiline") insertion = insertion.replace(/\r\n?/g, "\n");
+      else insertion = insertion.replace(/\r?\n/g, " ");
 
       const room = state.maxLength - (state.value.length - (state.selectionEnd - state.selectionStart));
       if (room <= 0) {
@@ -2307,6 +2416,8 @@
       state.value = state.value.slice(0, state.selectionStart) + insertion + state.value.slice(state.selectionEnd);
       state.selectionStart += insertion.length;
       state.selectionEnd = state.selectionStart;
+      state.showValidation = false;
+      syncBratKeyboardDraft();
       renderBratKeyboard();
     }
 
@@ -2322,6 +2433,8 @@
       state.value = state.value.slice(0, state.selectionStart) + state.value.slice(state.selectionEnd);
       state.selectionEnd = state.selectionStart;
       state.message = "";
+      state.showValidation = false;
+      syncBratKeyboardDraft();
       renderBratKeyboard();
     }
 
@@ -2335,6 +2448,8 @@
       if (state.selectionEnd >= state.value.length) return;
       state.value = state.value.slice(0, state.selectionStart) + state.value.slice(state.selectionEnd + 1);
       state.message = "";
+      state.showValidation = false;
+      syncBratKeyboardDraft();
       renderBratKeyboard();
     }
 
@@ -2350,6 +2465,37 @@
       state.selectionStart = position;
       state.selectionEnd = position;
       state.message = "";
+      syncBratKeyboardDraft(state, false);
+      renderBratKeyboard();
+    }
+
+    function moveBratKeyboardLine(direction) {
+      if (!bratKeyboardState || bratKeyboardState.mode !== "multiline") return;
+      const state = bratKeyboardState;
+      const position = direction < 0 ? state.selectionStart : state.selectionEnd;
+      const lineStart = state.value.lastIndexOf("\n", Math.max(0, position - 1)) + 1;
+      const column = position - lineStart;
+      let nextPosition = position;
+
+      if (direction < 0 && lineStart > 0) {
+        const previousEnd = lineStart - 1;
+        const previousStart = state.value.lastIndexOf("\n", Math.max(0, previousEnd - 1)) + 1;
+        nextPosition = Math.min(previousStart + column, previousEnd);
+      }
+      if (direction > 0) {
+        const lineEnd = state.value.indexOf("\n", position);
+        if (lineEnd !== -1) {
+          const nextStart = lineEnd + 1;
+          const nextEndIndex = state.value.indexOf("\n", nextStart);
+          const nextEnd = nextEndIndex === -1 ? state.value.length : nextEndIndex;
+          nextPosition = Math.min(nextStart + column, nextEnd);
+        }
+      }
+
+      state.selectionStart = nextPosition;
+      state.selectionEnd = nextPosition;
+      state.message = "";
+      syncBratKeyboardDraft(state, false);
       renderBratKeyboard();
     }
 
@@ -2359,40 +2505,65 @@
       bratKeyboardState.selectionStart = 0;
       bratKeyboardState.selectionEnd = 0;
       bratKeyboardState.message = "";
+      bratKeyboardState.showValidation = false;
+      syncBratKeyboardDraft();
       renderBratKeyboard();
     }
 
-    function finishBratKeyboard(cancelled) {
+    function finishBratKeyboard(outcome = "hide") {
       const state = bratKeyboardState;
       if (!state) return;
-      if (state.target) state.target.setAttribute("aria-expanded", "false");
+      if (outcome === "cancel") {
+        state.value = state.originalValue;
+        state.selectionStart = state.value.length;
+        state.selectionEnd = state.value.length;
+        syncBratKeyboardDraft(state, false);
+      }
+      if (state.target) {
+        state.target.setAttribute("aria-expanded", "false");
+        state.target.classList?.remove("brat-keyboard-active");
+      }
       bratKeyboardState = null;
       bratKeyboardShifted = false;
       bratKeyboardClosing = true;
-      document.body.classList.remove("brat-keyboard-open");
-      if (bratKeyboardDialog.open) bratKeyboardDialog.close();
-      if (cancelled && state.onCancel) state.onCancel();
+      stopBratKeyboardRepeat(true);
+      detachBratKeyboardDock();
+      if (outcome === "cancel" && state.onCancel) state.onCancel();
       window.setTimeout(() => {
         bratKeyboardClosing = false;
       }, 0);
     }
 
-    function cancelBratKeyboard() {
-      finishBratKeyboard(true);
+    function hideOrCancelBratKeyboard() {
+      if (!bratKeyboardState) return;
+      if (bratKeyboardState.isFormField) {
+        const validationMessage = validateBratKeyboardState();
+        if (validationMessage) {
+          bratKeyboardState.message = "";
+          bratKeyboardState.showValidation = true;
+          renderBratKeyboard();
+          return;
+        }
+        finishBratKeyboard("hide");
+        return;
+      }
+      finishBratKeyboard("cancel");
     }
 
-    function commitBratKeyboard() {
+    function commitBratKeyboard(moveNext = false) {
       if (!bratKeyboardState) return;
       const validationMessage = validateBratKeyboardState();
       if (validationMessage) {
-        setBratKeyboardMessage(validationMessage);
+        bratKeyboardState.message = "";
+        bratKeyboardState.showValidation = true;
+        renderBratKeyboard();
         return;
       }
 
       const state = bratKeyboardState;
-      if (state.target && "value" in state.target) state.target.value = state.value;
+      const nextTarget = moveNext && state.nextTarget?.isConnected ? state.nextTarget : null;
+      syncBratKeyboardDraft(state, false);
       if (state.dispatchChange && state.target) {
-        state.target.dispatchEvent(new Event("input", { bubbles: true }));
         state.target.dispatchEvent(new Event("change", { bubbles: true }));
       }
       const result = state.onCommit ? state.onCommit(state.value) : true;
@@ -2401,11 +2572,11 @@
         return;
       }
 
-      if (state.nextTarget) {
-        openBratKeyboard(state.nextTarget);
+      finishBratKeyboard("commit");
+      if (nextTarget) {
+        openBratKeyboard(nextTarget);
         return;
       }
-      finishBratKeyboard(false);
     }
 
     async function pasteIntoBratKeyboard() {
@@ -2418,7 +2589,8 @@
       try {
         let text = await navigator.clipboard.readText();
         if (bratKeyboardState !== state) return;
-        if (state.mode !== "multiline") text = text.replace(/\r?\n/g, " ");
+        if (state.mode === "multiline") text = text.replace(/\r\n?/g, "\n");
+        else text = text.replace(/\r?\n/g, " ");
         if (state.mode === "numeric") {
           text = text.trim();
           if (!/^\d+$/.test(text)) {
@@ -2441,12 +2613,13 @@
       if (action === "delete") deleteBratKeyboardCharacter();
       if (action === "left") moveBratKeyboardCaret(-1);
       if (action === "right") moveBratKeyboardCaret(1);
+      if (action === "up") moveBratKeyboardLine(-1);
+      if (action === "down") moveBratKeyboardLine(1);
       if (action === "clear") clearBratKeyboard();
       if (action === "enter") replaceBratKeyboardSelection("\n");
     }
 
-    bratKeyboardDialog.addEventListener("click", (event) => {
-      const button = event.target.closest("button");
+    function pressBratKeyboardButton(button) {
       if (!button || !bratKeyboardState) return;
       if (button.dataset.letter) {
         replaceBratKeyboardSelection(bratKeyboardShifted ? button.dataset.letter.toUpperCase() : button.dataset.letter);
@@ -2457,18 +2630,50 @@
       } else if (button.dataset.action) {
         handleBratKeyboardAction(button.dataset.action);
       }
+    }
+
+    function stopBratKeyboardRepeat(clearButton = false) {
+      window.clearTimeout(bratKeyboardRepeatDelay);
+      window.clearInterval(bratKeyboardRepeatTimer);
+      bratKeyboardRepeatDelay = null;
+      bratKeyboardRepeatTimer = null;
+      if (clearButton) bratKeyboardRepeatedButton = null;
+    }
+
+    bratKeyboardDialog.addEventListener("pointerdown", (event) => {
+      const button = event.target.closest("button");
+      if (!button || !bratKeyboardState) return;
+      event.preventDefault();
+      if (!button.hasAttribute("data-repeatable")) return;
+      stopBratKeyboardRepeat(true);
+      bratKeyboardRepeatedButton = button;
+      pressBratKeyboardButton(button);
+      bratKeyboardRepeatDelay = window.setTimeout(() => {
+        bratKeyboardRepeatTimer = window.setInterval(() => pressBratKeyboardButton(button), 70);
+      }, 350);
     });
 
-    bratKeyboardCancel.addEventListener("click", cancelBratKeyboard);
+    bratKeyboardDialog.addEventListener("click", (event) => {
+      const button = event.target.closest("button");
+      if (!button || !bratKeyboardState) return;
+      if (button === bratKeyboardRepeatedButton) {
+        bratKeyboardRepeatedButton = null;
+        return;
+      }
+      pressBratKeyboardButton(button);
+    });
+
+    window.addEventListener("pointerup", () => stopBratKeyboardRepeat());
+    window.addEventListener("pointercancel", () => stopBratKeyboardRepeat(true));
+    bratKeyboardCancel.addEventListener("click", hideOrCancelBratKeyboard);
     bratKeyboardPaste.addEventListener("click", pasteIntoBratKeyboard);
     bratKeyboardClear.addEventListener("click", clearBratKeyboard);
-    bratKeyboardCommit.addEventListener("click", commitBratKeyboard);
-    bratKeyboardDialog.addEventListener("cancel", (event) => {
-      event.preventDefault();
-      cancelBratKeyboard();
-    });
-    bratKeyboardDialog.addEventListener("keydown", (event) => {
+    bratKeyboardNext.addEventListener("click", () => commitBratKeyboard(true));
+    bratKeyboardCommit.addEventListener("click", () => commitBratKeyboard(false));
+
+    document.addEventListener("keydown", (event) => {
       if (!bratKeyboardState) return;
+      if (event.target.closest?.(".brat-keyboard-dock") && event.target.tagName === "BUTTON") return;
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "v") {
         event.preventDefault();
         pasteIntoBratKeyboard();
@@ -2476,7 +2681,7 @@
       }
       if (event.key === "Escape") {
         event.preventDefault();
-        cancelBratKeyboard();
+        hideOrCancelBratKeyboard();
       } else if (event.key === "Backspace") {
         event.preventDefault();
         backspaceBratKeyboard();
@@ -2489,28 +2694,48 @@
       } else if (event.key === "ArrowRight") {
         event.preventDefault();
         moveBratKeyboardCaret(1);
+      } else if (event.key === "ArrowUp" && bratKeyboardState.mode === "multiline") {
+        event.preventDefault();
+        moveBratKeyboardLine(-1);
+      } else if (event.key === "ArrowDown" && bratKeyboardState.mode === "multiline") {
+        event.preventDefault();
+        moveBratKeyboardLine(1);
+      } else if (event.key === "Tab" && bratKeyboardState.nextTarget?.isConnected) {
+        event.preventDefault();
+        commitBratKeyboard(true);
       } else if (event.key === "Enter") {
         event.preventDefault();
         if (bratKeyboardState.mode === "multiline" && !event.metaKey && !event.ctrlKey) replaceBratKeyboardSelection("\n");
-        else commitBratKeyboard();
+        else commitBratKeyboard(false);
       } else if (!event.metaKey && !event.ctrlKey && !event.altKey && event.key.length === 1) {
         event.preventDefault();
         replaceBratKeyboardSelection(event.key);
       }
-    });
+    }, true);
 
     document.addEventListener("click", (event) => {
       const target = event.target.closest("[data-brat-keyboard]");
-      if (!target || bratKeyboardClosing || bratKeyboardDialog.open) return;
+      if (!target || bratKeyboardClosing) return;
+      if (bratKeyboardState?.target === target) {
+        window.requestAnimationFrame(() => syncBratKeyboardSelectionFromTarget(target));
+        return;
+      }
       openBratKeyboard(target);
     });
     document.addEventListener("focusin", (event) => {
       const target = event.target.closest?.("[data-brat-keyboard]");
-      if (!target || bratKeyboardClosing || bratKeyboardDialog.open) return;
+      if (!target || bratKeyboardClosing || bratKeyboardState?.target === target) return;
       window.requestAnimationFrame(() => {
-        if (!bratKeyboardClosing && !bratKeyboardDialog.open && document.activeElement === target) openBratKeyboard(target);
+        if (!bratKeyboardClosing && document.activeElement === target) openBratKeyboard(target);
       });
     });
+
+    window.addEventListener("resize", positionBratKeyboardDock);
+    window.visualViewport?.addEventListener("resize", positionBratKeyboardDock);
+    window.visualViewport?.addEventListener("scroll", positionBratKeyboardDock);
+    new MutationObserver(() => {
+      if (bratKeyboardState?.target && !bratKeyboardState.target.isConnected) finishBratKeyboard("cleanup");
+    }).observe(document.body, { childList: true, subtree: true });
 
     function makeUniqueName(value, fallback, usedNames) {
       const baseName = normalizeName(value) || fallback;
@@ -3533,6 +3758,7 @@
     }
 
     function setMode(mode) {
+      if (bratKeyboardState) finishBratKeyboard(bratKeyboardState.isFormField ? "hide" : "cancel");
       state.mode = mode;
       setMenuOpen(false);
       render();
@@ -3567,6 +3793,9 @@
     }
 
     function closeCounterDialog(dialog) {
+      if (bratKeyboardState && (bratKeyboardHost === dialog || dialog.contains(bratKeyboardState.target))) {
+        finishBratKeyboard("cleanup");
+      }
       if (dialog.open) dialog.close();
     }
 
@@ -4062,7 +4291,10 @@
     cancelEditSkill.addEventListener("click", () => closeCounterDialog(editSkillDialog));
 
     [addDialog, removeDialog, classDialog, classPickerDialog, resetDialog, newListDialog, renameListDialog, deleteListDialog, addSkillDialog, removeSkillDialog, editSkillDialog].forEach((dialog) => {
-      dialog.addEventListener("close", () => restoreDialogFocus(dialog));
+      dialog.addEventListener("close", () => {
+        if (bratKeyboardHost === dialog) finishBratKeyboard("cleanup");
+        restoreDialogFocus(dialog);
+      });
     });
     classPickerDialog.addEventListener("close", () => {
       classSelector.setAttribute("aria-expanded", "false");
@@ -4726,6 +4958,9 @@
           maxLength: 2,
           selectAll: true,
           dispatchChange: false,
+          onDraft(value) {
+            trigger.textContent = value || "";
+          },
           onCommit(rawValue) {
             const currentStudent = findStudent(studentId);
             const value = Number(rawValue);
