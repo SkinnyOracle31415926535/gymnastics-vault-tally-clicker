@@ -2,25 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
-  <script>
-    (() => {
-      const stopZoom = (event) => event.preventDefault();
-      document.addEventListener('gesturestart', stopZoom, { passive: false });
-      document.addEventListener('gesturechange', stopZoom, { passive: false });
-      document.addEventListener('gestureend', stopZoom, { passive: false });
-      document.addEventListener('dblclick', stopZoom, { passive: false });
-      document.addEventListener('touchmove', (event) => {
-        if (event.touches.length > 1) event.preventDefault();
-      }, { passive: false });
-      document.addEventListener('wheel', (event) => {
-        if (event.ctrlKey || event.metaKey) event.preventDefault();
-      }, { passive: false });
-      document.addEventListener('keydown', (event) => {
-        if ((event.ctrlKey || event.metaKey) && ['+', '-', '=', '0'].includes(event.key)) event.preventDefault();
-      });
-    })();
-  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tally Clicker</title>
   <style>
     * {
