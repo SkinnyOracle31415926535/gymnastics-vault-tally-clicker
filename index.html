@@ -3228,9 +3228,9 @@
     }
 
     function playIncrementDing(context, now, score) {
-      const counterNotes = [329.63, 369.99, 415.3, 440];
-      const step = (Math.max(Math.abs(score), 1) - 1) % counterNotes.length;
-      const frequency = counterNotes[step];
+      const step = Math.min(19, Math.max(score, 1) - 1);
+      const baseFrequency = 520;
+      const frequency = baseFrequency * Math.pow(2, step / 12);
       const overtoneFrequency = frequency * 2.01;
       const output = context.createGain();
       const bell = context.createOscillator();
