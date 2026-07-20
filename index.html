@@ -3333,53 +3333,34 @@
 
     function playTodoCelebrationSong(context, now) {
       const notes = [
-        [523.25, 0, 0.16], [659.25, 0.15, 0.14], [783.99, 0.3, 0.14], [1046.5, 0.45, 0.25],
-        [783.99, 0.75, 0.14], [1046.5, 0.9, 0.14], [1318.51, 1.05, 0.14], [1567.98, 1.2, 0.28],
-        [1046.5, 1.58, 0.14], [1318.51, 1.73, 0.14], [1567.98, 1.88, 0.14], [2093, 2.03, 0.3],
-        [1318.51, 2.4, 0.14], [1567.98, 2.55, 0.14], [2093, 2.7, 0.14], [2637.02, 2.85, 0.36],
-        [2093, 3.34, 0.14], [2637.02, 3.49, 0.14], [3135.96, 3.64, 0.16], [2093, 3.82, 0.54]
+        [523.25, 0, 0.34], [659.25, 0.22, 0.34], [783.99, 0.44, 0.38], [1046.5, 0.7, 0.64],
+        [783.99, 1.28, 0.34], [1046.5, 1.5, 0.38], [1318.51, 1.76, 0.72], [1567.98, 2.32, 0.9]
       ];
 
       notes.forEach(([frequency, offset, duration]) => {
         const start = now + offset;
         const oscillator = context.createOscillator();
-        const bass = context.createOscillator();
+        const shimmer = context.createOscillator();
         const gain = context.createGain();
-        const bassGain = context.createGain();
-        oscillator.type = "sawtooth";
-        bass.type = "square";
+        const shimmerGain = context.createGain();
+        oscillator.type = "triangle";
+        shimmer.type = "sine";
         oscillator.frequency.setValueAtTime(frequency, start);
-        bass.frequency.setValueAtTime(frequency / 2, start);
+        shimmer.frequency.setValueAtTime(frequency * 2, start);
         gain.gain.setValueAtTime(0.0001, start);
-        gain.gain.exponentialRampToValueAtTime(0.11, start + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.095, start + 0.018);
         gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-        bassGain.gain.setValueAtTime(0.0001, start);
-        bassGain.gain.exponentialRampToValueAtTime(0.045, start + 0.008);
-        bassGain.gain.exponentialRampToValueAtTime(0.0001, start + Math.min(duration, 0.12));
+        shimmerGain.gain.setValueAtTime(0.0001, start);
+        shimmerGain.gain.exponentialRampToValueAtTime(0.026, start + 0.024);
+        shimmerGain.gain.exponentialRampToValueAtTime(0.0001, start + duration * 0.72);
         oscillator.connect(gain);
-        bass.connect(bassGain);
+        shimmer.connect(shimmerGain);
         gain.connect(context.destination);
-        bassGain.connect(context.destination);
+        shimmerGain.connect(context.destination);
         oscillator.start(start);
-        bass.start(start);
+        shimmer.start(start);
         oscillator.stop(start + duration + 0.02);
-        bass.stop(start + duration + 0.02);
-      });
-
-      [0, 0.6, 1.2, 1.8, 2.4, 3, 3.6].forEach((offset) => {
-        const start = now + offset;
-        const kick = context.createOscillator();
-        const gain = context.createGain();
-        kick.type = "sine";
-        kick.frequency.setValueAtTime(150, start);
-        kick.frequency.exponentialRampToValueAtTime(52, start + 0.11);
-        gain.gain.setValueAtTime(0.0001, start);
-        gain.gain.exponentialRampToValueAtTime(0.16, start + 0.006);
-        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.13);
-        kick.connect(gain);
-        gain.connect(context.destination);
-        kick.start(start);
-        kick.stop(start + 0.15);
+        shimmer.stop(start + duration + 0.02);
       });
     }
 
