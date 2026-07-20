@@ -1141,6 +1141,20 @@
       font-size: 22px;
     }
 
+    .streak-history-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      margin-top: 28px;
+      opacity: 0.72;
+    }
+
+    .streak-history-actions button {
+      min-height: 42px;
+      padding: 5px 9px;
+      font-size: 17px;
+    }
+
     .streak-primary {
       color: var(--green);
       background: var(--black);
@@ -1857,11 +1871,15 @@
               <button id="streakTeamBreakButton" type="button">team broke</button>
             </div>
             <div class="streak-actions">
-              <button id="streakUndoTeamButton" type="button" disabled>undo</button>
               <button id="streakResetTeamButton" type="button">reset team</button>
             </div>
           </div>
         </section>
+
+        <div class="streak-history-actions" aria-label="Streak history">
+          <button id="streakUndoButton" type="button" disabled>undo</button>
+          <button id="streakRedoButton" type="button" disabled>redo</button>
+        </div>
 
       </section>
     </section>
@@ -4653,8 +4671,9 @@
       const teamPointsReadout = document.getElementById("streakTeamPointsReadout");
       const teamPassButton = document.getElementById("streakTeamPassButton");
       const teamBreakButton = document.getElementById("streakTeamBreakButton");
-      const undoTeamButton = document.getElementById("streakUndoTeamButton");
       const resetTeamButton = document.getElementById("streakResetTeamButton");
+      const undoButton = document.getElementById("streakUndoButton");
+      const redoButton = document.getElementById("streakRedoButton");
       const soundToggle = document.getElementById("streakSoundToggle");
       const studentList = document.getElementById("streakStudentList");
       const emptyState = document.getElementById("streakEmptyState");
@@ -4676,7 +4695,8 @@
       let scoreResetArmed = false;
       let teamResetConfirmTimer = null;
       let teamResetArmed = false;
-      let teamUndoSnapshot = null;
+      let undoStack = [];
+      let redoStack = [];
       let streakState = makeEmptyStreakState();
 
       function makeStreakId() {
@@ -4833,6 +4853,45 @@
         if (message) statusText.textContent = message;
       }
 
+      function cloneStreakState() {
+        return JSON.parse(JSON.stringify(streakState));
+      }
+
+      function rememberStreakState() {
+        undoStack.push(cloneStreakState());
+        if (undoStack.length > 30) undoStack.shift();
+        redoStack = [];
+      }
+
+      function renderHistoryControls() {
+        undoButton.disabled = undoStack.length === 0;
+        redoButton.disabled = redoStack.length === 0;
+        undoButton.title = undoStack.length ? "undo last streak change" : "nothing to undo";
+        redoButton.title = redoStack.length ? "redo last streak change" : "nothing to redo";
+      }
+
+      function restoreStreakHistory(snapshot, action) {
+        streakState = sanitizeStreakState(snapshot);
+        hideCelebration();
+        renderAll();
+        playPassSound();
+        saveStreakState(action);
+      }
+
+      function undoStreakChange() {
+        const previous = undoStack.pop();
+        if (!previous) return;
+        redoStack.push(cloneStreakState());
+        restoreStreakHistory(previous, "undid streak change");
+      }
+
+      function redoStreakChange() {
+        const next = redoStack.pop();
+        if (!next) return;
+        undoStack.push(cloneStreakState());
+        restoreStreakHistory(next, "redid streak change");
+      }
+
       function loadStreakState() {
         try {
           const savedState = localStorage.getItem(STREAK_STORAGE_KEY);
@@ -4862,8 +4921,6 @@
         teamTargetInput.value = streakState.teamTarget;
         teamStreakReadout.textContent = streakState.teamStreak + "/" + streakState.teamTarget;
         teamPointsReadout.textContent = streakState.teamPoints;
-        undoTeamButton.disabled = !teamUndoSnapshot;
-        undoTeamButton.title = teamUndoSnapshot ? "restore last team change" : "nothing to undo";
         resetTeamButton.textContent = teamResetArmed ? "confirm reset" : "reset team";
         resetTeamButton.classList.toggle("streak-primary", teamResetArmed);
       }
@@ -4879,6 +4936,7 @@
         });
         renderScoreResetControl();
         renderTeamControls();
+        renderHistoryControls();
       }
 
       function renderScreen() {
@@ -5086,16 +5144,6 @@
         oscillator.stop(now + 0.21);
       }
 
-      function captureTeamUndo(action) {
-        teamUndoSnapshot = {
-          action,
-          teamEnabled: Boolean(streakState.teamEnabled),
-          teamTarget: streakState.teamTarget,
-          teamStreak: streakState.teamStreak,
-          teamPoints: streakState.teamPoints
-        };
-      }
-
       function clearTeamResetConfirm() {
         teamResetArmed = false;
         if (teamResetConfirmTimer) {
@@ -5140,21 +5188,6 @@
         }, 4000);
       }
 
-      function undoTeamChange() {
-        if (!teamUndoSnapshot) return;
-        clearTeamResetConfirm();
-        streakState.teamEnabled = teamUndoSnapshot.teamEnabled;
-        streakState.teamTarget = teamUndoSnapshot.teamTarget;
-        streakState.teamStreak = teamUndoSnapshot.teamStreak;
-        streakState.teamPoints = teamUndoSnapshot.teamPoints;
-        const action = teamUndoSnapshot.action;
-        teamUndoSnapshot = null;
-        hideCelebration();
-        renderStats();
-        playPassSound();
-        saveStreakState("undid " + action);
-      }
-
       function advanceTeam(source) {
         if (!streakState.teamEnabled) return false;
         streakState.teamStreak += 1;
@@ -5182,7 +5215,7 @@
 
       function breakTeam(source) {
         clearTeamResetConfirm();
-        captureTeamUndo("team broke");
+        rememberStreakState();
         streakState.teamEnabled = true;
         streakState.teamStreak = 0;
         renderStats();
@@ -5196,7 +5229,7 @@
           return;
         }
         clearTeamResetConfirm();
-        captureTeamUndo("team reset");
+        rememberStreakState();
         streakState.teamEnabled = true;
         streakState.teamStreak = 0;
         streakState.teamPoints = 0;
@@ -5234,6 +5267,7 @@
       function passStudent(id) {
         const student = findStudent(id);
         if (!student) return;
+        rememberStreakState();
         student.streak += 1;
         if (student.streak >= student.target) {
           student.points += 1;
@@ -5255,6 +5289,7 @@
       function breakStudent(id) {
         const student = findStudent(id);
         if (!student) return;
+        rememberStreakState();
         student.streak = 0;
         renderStats();
         renderStudents();
@@ -5266,6 +5301,7 @@
       function updateStudentNumber(id, field, value) {
         const student = findStudent(id);
         if (!student) return;
+        rememberStreakState();
         if (field === "streak") student.streak = clampStreakNumber(value, 0, 0, 999);
         if (field === "points") student.points = clampStreakNumber(value, 0, 0, 999);
         saveStreakState("changed " + field);
@@ -5293,6 +5329,7 @@
             const currentStudent = findStudent(studentId);
             const value = Number(rawValue);
             if (!currentStudent || !Number.isInteger(value) || value < 1 || value > 99) return "needed must be 1–99";
+            rememberStreakState();
             currentStudent.target = value;
 
             const savedClass = state.classes.find((item) => item.id === streakState.activeClassId);
@@ -5310,6 +5347,7 @@
       }
 
       function loadStreakClass(savedClass) {
+        rememberStreakState();
         streakState.activeClassId = savedClass.id;
         streakState.rosterName = savedClass.name;
         streakState.defaultTarget = 3;
@@ -5328,6 +5366,7 @@
           return;
         }
         clearScoreResetConfirm();
+        rememberStreakState();
         streakState.students.forEach((student) => {
           student.streak = 0;
           student.points = 0;
@@ -5372,6 +5411,7 @@
       });
 
       teamTargetInput.addEventListener("change", () => {
+        rememberStreakState();
         syncTeamTargetFromInput();
         renderStats();
         saveStreakState("team goal " + streakState.teamTarget);
@@ -5392,16 +5432,17 @@
       teamScreenButton.addEventListener("click", () => setScreen("team"));
       teamPassButton.addEventListener("click", () => {
         clearTeamResetConfirm();
+        rememberStreakState();
         syncTeamTargetFromInput();
-        captureTeamUndo("team pass");
         streakState.teamEnabled = true;
         const teamPoint = advanceTeam("team");
         renderStats();
         saveStreakState(teamPoint ? "team got a point" : "team streak " + streakState.teamStreak + "/" + streakState.teamTarget);
       });
       teamBreakButton.addEventListener("click", () => breakTeam("team"));
-      undoTeamButton.addEventListener("click", undoTeamChange);
       resetTeamButton.addEventListener("click", resetTeam);
+      undoButton.addEventListener("click", undoStreakChange);
+      redoButton.addEventListener("click", redoStreakChange);
       closeCelebrationButton.addEventListener("click", hideCelebration);
       streakCelebration.addEventListener("click", (event) => {
         if (event.target === streakCelebration) hideCelebration();
@@ -5415,7 +5456,8 @@
           control.matches("[data-action]") ||
           control === teamPassButton ||
           control === teamBreakButton ||
-          control === undoTeamButton ||
+          control === undoButton ||
+          control === redoButton ||
           (control === resetScoresButton && scoreResetArmed) ||
           (control === resetTeamButton && teamResetArmed);
         if (!usesActionSound) playUiTapSound();
