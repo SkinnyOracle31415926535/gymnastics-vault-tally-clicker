@@ -819,7 +819,7 @@
       text-align: center;
       letter-spacing: -0.08em;
       text-shadow: none;
-      text-transform: uppercase;
+      text-transform: lowercase;
       animation: celebration-card 520ms steps(1, end) infinite;
     }
 
@@ -3198,9 +3198,9 @@
     }
 
     function playIncrementDing(context, now, score) {
-      const step = Math.min(19, Math.max(score, 1) - 1);
-      const baseFrequency = 520;
-      const frequency = baseFrequency * Math.pow(2, step / 12);
+      const counterNotes = [329.63, 369.99, 415.3, 440];
+      const step = (Math.max(Math.abs(score), 1) - 1) % counterNotes.length;
+      const frequency = counterNotes[step];
       const overtoneFrequency = frequency * 2.01;
       const output = context.createGain();
       const bell = context.createOscillator();
@@ -5038,13 +5038,16 @@
         return totalStudentPoints() + streakState.teamPoints;
       }
 
-      function pointBaseFrequency(pointNumber) {
-        const step = Math.min(19, Math.max(0, pointNumber - 1));
-        return 520 * Math.pow(2, step / 12);
+      function streakProgressFrequency(streak, target) {
+        const notes = [329.63, 369.99, 415.3, 440, 493.88];
+        const safeTarget = Math.max(1, target || 1);
+        const progress = Math.max(1, Math.min(streak || 1, safeTarget));
+        const step = Math.min(notes.length - 1, Math.floor(((progress - 1) / safeTarget) * notes.length));
+        return notes[step];
       }
 
-      function playPointSound(pointNumber, startOffset) {
-        const base = pointBaseFrequency(pointNumber || 1);
+      function playStreakProgressSound(streak, target, startOffset) {
+        const base = streakProgressFrequency(streak, target);
         playTone(base, 0.14, "triangle", 0.24, startOffset || 0);
         playTone(base * 1.5, 0.18, "sine", 0.22, (startOffset || 0) + 0.07);
         playTone(base * 2, 0.24, "sine", 0.18, (startOffset || 0) + 0.16);
@@ -5059,10 +5062,9 @@
       }
 
       function playCelebrationSound() {
-        const pointNumber = totalAllPoints();
-        playPointSound(pointNumber, 0);
-        playPointSound(pointNumber + 1, 0.24);
-        playTone(pointBaseFrequency(pointNumber + 2) * 1.5, 0.36, "triangle", 0.16, 0.5);
+        playStreakProgressSound(5, 5, 0);
+        playStreakProgressSound(5, 5, 0.24);
+        playTone(739.99, 0.36, "triangle", 0.16, 0.5);
       }
 
       function playBreakSound() {
@@ -5163,7 +5165,7 @@
           playCelebrationSound();
           return true;
         }
-        playPassSound();
+        playStreakProgressSound(streakState.teamStreak, streakState.teamTarget);
         return false;
       }
 
@@ -5239,14 +5241,14 @@
           renderStats();
           renderStudents();
           flashRow(id, "point-flash");
-          playPointSound(totalStudentPoints());
+          playCelebrationSound();
           saveStreakState(student.name.toLowerCase() + " got a point");
           return;
         }
         renderStats();
         renderStudents();
         flashRow(id, "point-flash");
-        playPassSound();
+        playStreakProgressSound(student.streak, student.target);
         saveStreakState(student.name.toLowerCase() + " streak " + student.streak + "/" + student.target);
       }
 
