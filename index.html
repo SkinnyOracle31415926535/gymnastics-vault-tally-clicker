@@ -726,6 +726,20 @@
       background: var(--green);
     }
 
+    .todo-history-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      margin-top: 18px;
+      opacity: 0.72;
+    }
+
+    .todo-history-actions button {
+      min-height: 42px;
+      padding: 5px 9px;
+      font-size: 17px;
+    }
+
     .list-controls .clear {
       grid-column: 1 / -1;
     }
@@ -1807,6 +1821,10 @@
         <div class="list-reset-actions">
           <button id="resetTodo" class="todo-reset" type="button">reset all</button>
         </div>
+        <div class="todo-history-actions" aria-label="TODO history">
+          <button id="todoUndoButton" type="button" disabled>undo</button>
+          <button id="todoRedoButton" type="button" disabled>redo</button>
+        </div>
       </section>
 
       <section id="streakPanel" class="panel streak-panel" aria-label="Streak counter">
@@ -2196,6 +2214,8 @@
     const listMinus = document.getElementById("listMinus");
     const resetCurrentSkill = document.getElementById("resetCurrentSkill");
     const resetTodo = document.getElementById("resetTodo");
+    const todoUndoButton = document.getElementById("todoUndoButton");
+    const todoRedoButton = document.getElementById("todoRedoButton");
     const listPanel = document.getElementById("listPanel");
     const listTableHead = document.getElementById("listTableHead");
     const listTableBody = document.getElementById("listTableBody");
@@ -2240,6 +2260,8 @@
       selectedListId: null,
       listSeedVersion: 0
     };
+    let todoUndoStack = [];
+    let todoRedoStack = [];
     let audioContext = null;
     let selectedRemovalIds = new Set();
     let removeConfirmationArmed = false;
@@ -3211,6 +3233,54 @@
       }
     }
 
+    function cloneTodoState() {
+      return JSON.parse(JSON.stringify({
+        lists: state.lists,
+        selectedListId: state.selectedListId,
+        listSeedVersion: state.listSeedVersion
+      }));
+    }
+
+    function rememberTodoState() {
+      todoUndoStack.push(cloneTodoState());
+      if (todoUndoStack.length > 30) todoUndoStack.shift();
+      todoRedoStack = [];
+    }
+
+    function renderTodoHistoryControls() {
+      todoUndoButton.disabled = todoUndoStack.length === 0;
+      todoRedoButton.disabled = todoRedoStack.length === 0;
+      todoUndoButton.title = todoUndoStack.length ? "undo last TODO change" : "nothing to undo";
+      todoRedoButton.title = todoRedoStack.length ? "redo last TODO change" : "nothing to redo";
+    }
+
+    function restoreTodoHistory(snapshot, message) {
+      state.lists = normalizeLists(snapshot.lists);
+      state.selectedListId = state.lists.some((list) => list.id === snapshot.selectedListId)
+        ? snapshot.selectedListId
+        : state.lists[0]?.id || null;
+      state.listSeedVersion = snapshot.listSeedVersion || 0;
+      isListEditing = false;
+      hideTodoCelebration();
+      saveState();
+      renderList();
+      statusbar.textContent = message;
+    }
+
+    function undoTodoChange() {
+      const previous = todoUndoStack.pop();
+      if (!previous) return;
+      todoRedoStack.push(cloneTodoState());
+      restoreTodoHistory(previous, "undid TODO change");
+    }
+
+    function redoTodoChange() {
+      const next = todoRedoStack.pop();
+      if (!next) return;
+      todoUndoStack.push(cloneTodoState());
+      restoreTodoHistory(next, "redid TODO change");
+    }
+
     function flash(element, kind) {
       element.classList.remove("plus-flash", "minus-flash");
       void element.offsetWidth;
@@ -3795,6 +3865,7 @@
       const skill = getSkillById(skillId);
       if (!skill) return;
 
+      rememberTodoState();
       skill.hidden = !skill.hidden;
       saveState();
       renderList();
@@ -3895,6 +3966,7 @@
       listProgressFill.style.width = stats.percentage + "%";
       listSuccess.classList.toggle("active", isComplete);
       listSuccess.textContent = hasList ? list.name + " TODO complete! great work." : "TODO complete! great work.";
+      renderTodoHistoryControls();
 
       listTableHead.innerHTML = "";
       const headerRow = document.createElement("tr");
@@ -4031,6 +4103,7 @@
         return false;
       }
 
+      rememberTodoState();
       skill.name = name;
       skill.reps = reps;
       skill.completed = Math.min(skill.completed, reps);
@@ -4366,6 +4439,7 @@
         return false;
       }
 
+      rememberTodoState();
       const list = { id: makeId("list"), name, skills: [] };
       state.lists.push(list);
       state.selectedListId = list.id;
@@ -4402,6 +4476,7 @@
         return false;
       }
 
+      rememberTodoState();
       list.name = name;
       saveState();
       renderList();
@@ -4420,6 +4495,7 @@
       const list = getSelectedList();
       if (!list) return;
 
+      rememberTodoState();
       state.lists = state.lists.filter((item) => item.id !== list.id);
       state.selectedListId = state.lists[0]?.id || null;
       isListEditing = false;
@@ -4462,6 +4538,7 @@
         return false;
       }
 
+      rememberTodoState();
       list.skills.push({ id: makeId("skill"), name, reps, completed: 0, hidden: false });
       saveState();
       renderList();
@@ -4480,6 +4557,7 @@
 
       const skillWasComplete = skill.completed >= skill.reps;
       const todoWasComplete = !getCurrentSkill(list);
+      rememberTodoState();
       skill.completed = Math.max(0, Math.min(skill.reps, skill.completed + amount));
       saveState();
       renderList();
@@ -4495,13 +4573,12 @@
       if (amount > 0 && !todoWasComplete && todoIsComplete) {
         window.setTimeout(() => {
           const completedList = state.lists.find((item) => item.id === list.id);
-          if (completedList && !getCurrentSkill(completedList)) {
-            completedList.skills.forEach((item) => {
-              item.completed = 0;
-            });
-            saveState();
-            renderList();
-          }
+          if (!completedList || getCurrentSkill(completedList)) return;
+          completedList.skills.forEach((item) => {
+            item.completed = 0;
+          });
+          saveState();
+          renderList();
           showTodoCelebration();
           playSound("todo");
           statusbar.textContent = list.name + " TODO complete! reset and ready to go.";
@@ -4516,6 +4593,7 @@
       const skill = getCurrentSkill(list);
       if (!skill) return;
 
+      rememberTodoState();
       skill.completed = 0;
       saveState();
       renderList();
@@ -4527,6 +4605,7 @@
       const list = getSelectedList();
       if (!list?.skills.length) return;
 
+      rememberTodoState();
       list.skills.forEach((skill) => {
         skill.completed = 0;
       });
@@ -4581,6 +4660,8 @@
     listMinus.addEventListener("click", () => changeCurrentSkill(-1));
     resetCurrentSkill.addEventListener("click", resetCurrentSkillProgress);
     resetTodo.addEventListener("click", resetEntireTodo);
+    todoUndoButton.addEventListener("click", undoTodoChange);
+    todoRedoButton.addEventListener("click", redoTodoChange);
     closeCelebration.addEventListener("click", hideTodoCelebration);
 
     addCounterForm.addEventListener("submit", (event) => {
