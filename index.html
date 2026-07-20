@@ -3301,6 +3301,28 @@
       });
     }
 
+    function playTodoCelebrationSong(context, now) {
+      const notes = [
+        [523.25, 0, 0.16], [659.25, 0.13, 0.16], [783.99, 0.26, 0.16],
+        [1046.5, 0.39, 0.2], [783.99, 0.56, 0.15], [1046.5, 0.69, 0.34]
+      ];
+
+      notes.forEach(([frequency, offset, duration]) => {
+        const start = now + offset;
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = "triangle";
+        oscillator.frequency.setValueAtTime(frequency, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.16, start + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start(start);
+        oscillator.stop(start + duration + 0.02);
+      });
+    }
+
     function playSound(kind, score) {
       const context = getAudioContext();
       if (context.state === "suspended") context.resume();
@@ -3310,6 +3332,8 @@
         playIncrementDing(context, now, score);
       } else if (kind === "goal") {
         playSkillGoalCelebration(context, now);
+      } else if (kind === "todo") {
+        playTodoCelebrationSong(context, now);
       } else if (kind === "clear") {
         playClearSound(context, now);
       } else {
@@ -3736,70 +3760,35 @@
       moveSkillRelative(skillId, target.id, direction > 0);
     }
 
-    function appendReorderSkillRow(skill, index, skills) {
+    function toggleSkillVisibility(skillId) {
+      const skill = getSkillById(skillId);
+      if (!skill) return;
+
+      skill.hidden = !skill.hidden;
+      saveState();
+      renderList();
+      statusbar.textContent = skill.name + (skill.hidden ? " hidden" : " shown");
+    }
+
+    function appendSkillEditRow(skill) {
       const row = document.createElement("tr");
       row.classList.toggle("is-current", getCurrentSkill(getSelectedList())?.id === skill.id);
       row.classList.toggle("is-complete", skill.completed >= skill.reps);
-
-      const move = document.createElement("td");
-      const dragHandle = document.createElement("button");
-      dragHandle.type = "button";
-      dragHandle.className = "skill-drag-handle";
-      dragHandle.textContent = "↕";
-      dragHandle.draggable = true;
-      dragHandle.setAttribute("aria-label", "Drag " + skill.name + " to move it");
-      dragHandle.addEventListener("dragstart", (event) => {
-        draggedSkillId = skill.id;
-        row.classList.add("is-dragging");
-        event.dataTransfer?.setData("text/plain", skill.id);
-      });
-      dragHandle.addEventListener("dragend", () => {
-        draggedSkillId = null;
-        row.classList.remove("is-dragging");
-        Array.from(listTableBody.children).forEach((item) => item.classList.remove("drag-over", "drop-after"));
-      });
-      move.appendChild(dragHandle);
-
-      row.addEventListener("dragover", (event) => {
-        if (!draggedSkillId || draggedSkillId === skill.id) return;
-        event.preventDefault();
-        const bounds = row.getBoundingClientRect();
-        row.classList.add("drag-over");
-        row.classList.toggle("drop-after", event.clientY > bounds.top + bounds.height / 2);
-      });
-      row.addEventListener("dragleave", () => row.classList.remove("drag-over", "drop-after"));
-      row.addEventListener("drop", (event) => {
-        event.preventDefault();
-        const sourceId = event.dataTransfer?.getData("text/plain") || draggedSkillId;
-        const bounds = row.getBoundingClientRect();
-        row.classList.remove("drag-over", "drop-after");
-        if (sourceId) moveSkillRelative(sourceId, skill.id, event.clientY > bounds.top + bounds.height / 2);
-        draggedSkillId = null;
-      });
 
       const name = document.createElement("td");
       name.textContent = skill.name;
       const reps = document.createElement("td");
       reps.className = "skill-progress";
       reps.textContent = skill.completed + " / " + skill.reps;
-      const order = document.createElement("td");
-      const actions = document.createElement("div");
-      actions.className = "skill-order-actions";
-      [
-        ["↑", -1, "up"],
-        ["↓", 1, "down"]
-      ].forEach(([label, direction, directionName]) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "skill-order-button";
-        button.textContent = label;
-        button.disabled = direction < 0 ? index === 0 : index === skills.length - 1;
-        button.setAttribute("aria-label", "Move " + skill.name + " " + directionName);
-        button.addEventListener("click", () => moveSkillByOffset(skill.id, direction));
-        actions.appendChild(button);
-      });
-      order.appendChild(actions);
-      row.append(move, name, reps, order);
+      const visibility = document.createElement("td");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "skill-order-button";
+      button.textContent = skill.hidden ? "show" : "hide";
+      button.setAttribute("aria-label", (skill.hidden ? "Show " : "Hide ") + skill.name);
+      button.addEventListener("click", () => toggleSkillVisibility(skill.id));
+      visibility.appendChild(button);
+      row.append(name, reps, visibility);
       listTableBody.appendChild(row);
     }
 
@@ -3878,7 +3867,7 @@
 
       listTableHead.innerHTML = "";
       const headerRow = document.createElement("tr");
-      (isListEditing ? ["move", "skill", "reps", "order"] : ["skill", "reps", "status"]).forEach((label) => {
+      (isListEditing ? ["skill", "reps", "hide"] : ["skill", "reps", "status"]).forEach((label) => {
         const heading = document.createElement("th");
         heading.scope = "col";
         heading.textContent = label;
@@ -3888,7 +3877,7 @@
       listTableHead.parentElement.classList.toggle("editing", isListEditing);
 
       listTableBody.innerHTML = "";
-      const columnCount = isListEditing ? 4 : 3;
+      const columnCount = 3;
       if (!hasList) {
         addListTableMessage("create a TODO to begin", columnCount);
         return;
@@ -3898,9 +3887,9 @@
         return;
       }
 
-      list.skills.forEach((skill, index) => {
+      list.skills.forEach((skill) => {
         if (isListEditing) {
-          appendReorderSkillRow(skill, index, list.skills);
+          appendSkillEditRow(skill);
           return;
         }
         const row = document.createElement("tr");
@@ -4483,6 +4472,7 @@
             renderList();
           }
           showTodoCelebration();
+          playSound("todo");
           statusbar.textContent = list.name + " TODO complete! reset and ready to go.";
         }, 520);
       } else {
