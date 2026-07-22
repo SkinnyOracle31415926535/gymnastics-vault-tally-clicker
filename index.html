@@ -368,6 +368,29 @@
       text-transform: lowercase;
     }
 
+    .mode-view-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .mode-view-actions button {
+      min-height: 54px;
+      font-size: 24px;
+      text-transform: lowercase;
+    }
+
+    .mode-view-actions .is-active {
+      color: var(--green);
+      background: var(--black);
+    }
+
+    .counter-actions .counter-visibility {
+      grid-column: 1 / -1;
+      font-size: clamp(16px, 4.5vw, 24px);
+      text-transform: lowercase;
+    }
+
     .list-toolbar {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1745,6 +1768,10 @@
 
       <section id="multiplePanel" class="panel" aria-label="Multiple point counters">
         <div id="multipleLeader" class="display label-display" aria-live="polite">multiple points</div>
+        <div class="mode-view-actions" role="group" aria-label="Multiple counter mode">
+          <button id="multipleViewButton" class="is-active" type="button" aria-pressed="true">view</button>
+          <button id="multipleEditButton" type="button" aria-pressed="false">edit</button>
+        </div>
         <div id="multipleList" class="counter-list"></div>
         <div class="controls">
           <button id="resetMultiple" class="clear" type="button">reset multiple</button>
@@ -1871,6 +1898,11 @@
           <div class="streak-actions">
             <button id="streakResetScoresButton" type="button">reset scores</button>
             <button id="streakCopySummaryButton" type="button">copy</button>
+          </div>
+
+          <div class="mode-view-actions" role="group" aria-label="Streak counter mode">
+            <button id="streakViewButton" class="is-active" type="button" aria-pressed="true">view</button>
+            <button id="streakEditButton" type="button" aria-pressed="false">edit</button>
           </div>
 
           <div id="streakStudentList" class="streak-student-list"></div>
@@ -2148,6 +2180,8 @@
     const resetMultiple = document.getElementById("resetMultiple");
     const addMultiple = document.getElementById("addMultiple");
     const removeMultiple = document.getElementById("removeMultiple");
+    const multipleViewButton = document.getElementById("multipleViewButton");
+    const multipleEditButton = document.getElementById("multipleEditButton");
     const addDialog = document.getElementById("addDialog");
     const addCounterForm = document.getElementById("addCounterForm");
     const addCounterName = document.getElementById("addCounterName");
@@ -2274,6 +2308,7 @@
     let selectedSkillEditId = null;
     let skillFlashTimer = null;
     let isListEditing = false;
+    let isMultipleEditing = false;
     let draggedSkillId = null;
     let bratKeyboardState = null;
     let bratKeyboardShifted = false;
@@ -3049,7 +3084,8 @@
         return {
           id,
           name: makeUniqueName(normalizeMultipleName(rawCounter.name), prefix + " " + (index + 1), usedNames),
-          score: Number.isFinite(Number(rawCounter.score)) ? Number(rawCounter.score) : 0
+          score: Number.isFinite(Number(rawCounter.score)) ? Number(rawCounter.score) : 0,
+          hidden: Boolean(rawCounter.hidden)
         };
       });
     }
@@ -3500,6 +3536,34 @@
       return Array.from(multipleList.children).find((card) => card.dataset.counterId === id);
     }
 
+    function getVisibleCounters() {
+      return state.multiple.filter((counter) => !counter.hidden);
+    }
+
+    function renderMultipleViewMode() {
+      multipleViewButton.classList.toggle("is-active", !isMultipleEditing);
+      multipleEditButton.classList.toggle("is-active", isMultipleEditing);
+      multipleViewButton.setAttribute("aria-pressed", String(!isMultipleEditing));
+      multipleEditButton.setAttribute("aria-pressed", String(isMultipleEditing));
+      addMultiple.hidden = !isMultipleEditing;
+      removeMultiple.hidden = !isMultipleEditing;
+    }
+
+    function setMultipleEditing(editing) {
+      isMultipleEditing = editing;
+      renderMultiple();
+      statusbar.textContent = editing ? "editing multiple counters" : "multiple counter view ready";
+    }
+
+    function setCounterHidden(id, hidden) {
+      const counter = state.multiple.find((item) => item.id === id);
+      if (!counter) return;
+      counter.hidden = hidden;
+      saveState();
+      renderMultiple();
+      statusbar.textContent = counter.name + (hidden ? " hidden" : " shown");
+    }
+
     function editCounterName(item, nameButton) {
       const input = document.createElement("input");
       input.type = "text";
@@ -3573,25 +3637,29 @@
     function renderCounterList() {
       multipleList.innerHTML = "";
 
-      if (!state.multiple.length) {
+      const counters = isMultipleEditing ? state.multiple : getVisibleCounters();
+
+      if (!counters.length) {
         const empty = document.createElement("div");
         empty.className = "empty";
-        empty.textContent = "add a class, team, or person";
+        empty.textContent = state.multiple.length ? "all kids hidden — edit to show one" : "add a class, team, or person";
         multipleList.appendChild(empty);
         return;
       }
 
-      state.multiple.forEach((item) => {
+      counters.forEach((item) => {
         const card = document.createElement("article");
         card.className = "counter-card";
         card.dataset.counterId = item.id;
 
-        const name = document.createElement("button");
-        name.type = "button";
+        const name = document.createElement(isMultipleEditing ? "button" : "div");
         name.className = "counter-name";
-        name.textContent = item.name;
-        name.setAttribute("aria-label", "Edit " + item.name);
-        name.addEventListener("click", () => editCounterName(item, name));
+        name.textContent = item.name + (isMultipleEditing && item.hidden ? " (hidden)" : "");
+        if (isMultipleEditing) {
+          name.type = "button";
+          name.setAttribute("aria-label", "Edit " + item.name);
+          name.addEventListener("click", () => editCounterName(item, name));
+        }
 
         const score = document.createElement("div");
         score.className = "counter-score";
@@ -3622,6 +3690,15 @@
         clear.addEventListener("click", () => clearMultipleCounter(item.id));
 
         actions.append(plus, minus, clear);
+        if (isMultipleEditing) {
+          const visibility = document.createElement("button");
+          visibility.type = "button";
+          visibility.className = "counter-visibility";
+          visibility.textContent = item.hidden ? "show" : "hide";
+          visibility.setAttribute("aria-label", (item.hidden ? "Show " : "Hide ") + item.name);
+          visibility.addEventListener("click", () => setCounterHidden(item.id, !item.hidden));
+          actions.appendChild(visibility);
+        }
         card.append(name, score, actions);
         multipleList.appendChild(card);
       });
@@ -3812,9 +3889,10 @@
     function renderMultiple() {
       renderClassRosterControls();
       renderCounterList();
-      multipleLeader.textContent = getLeader(state.multiple, "multiple points");
+      multipleLeader.textContent = getLeader(getVisibleCounters(), "multiple points");
       multipleLeader.hidden = !state.showMultipleLeader;
       showMultipleLeader.checked = state.showMultipleLeader;
+      renderMultipleViewMode();
     }
 
     function addListTableMessage(message, columnCount = 3) {
@@ -4126,6 +4204,7 @@
       if (bratKeyboardState) finishBratKeyboard(bratKeyboardState.isFormField ? "hide" : "cancel");
       cancelCounterClear(false);
       state.mode = mode;
+      if (mode !== "multiple") isMultipleEditing = false;
       setMenuOpen(false);
       render();
       statusbar.textContent = mode === "multiple" ? "multiple points" : mode === "list" ? "TODOs" : mode === "streak" ? "streak counter" : "single points";
@@ -4631,6 +4710,8 @@
     resetMultiple.addEventListener("click", () => openResetDialog("multiple"));
     addMultiple.addEventListener("click", openAddDialog);
     removeMultiple.addEventListener("click", openRemoveDialog);
+    multipleViewButton.addEventListener("click", () => setMultipleEditing(false));
+    multipleEditButton.addEventListener("click", () => setMultipleEditing(true));
     showMultipleLeader.addEventListener("change", () => {
       state.showMultipleLeader = showMultipleLeader.checked;
       saveState();
@@ -4757,6 +4838,8 @@
       const teamModeView = document.getElementById("streakTeamModeView");
       const resetScoresButton = document.getElementById("streakResetScoresButton");
       const copySummaryButton = document.getElementById("streakCopySummaryButton");
+      const viewButton = document.getElementById("streakViewButton");
+      const editButton = document.getElementById("streakEditButton");
       const teamTargetInput = document.getElementById("streakTeamTargetInput");
       const teamStreakReadout = document.getElementById("streakTeamStreakReadout");
       const teamPointsReadout = document.getElementById("streakTeamPointsReadout");
@@ -4788,6 +4871,7 @@
       let teamResetArmed = false;
       let undoStack = [];
       let redoStack = [];
+      let isStreakEditing = false;
       let streakState = makeEmptyStreakState();
 
       function makeStreakId() {
@@ -4810,7 +4894,8 @@
           name,
           streak: 0,
           target: clampStreakNumber(target, 3, 1, 99),
-          points: 0
+          points: 0,
+          hidden: false
         };
       }
 
@@ -4853,7 +4938,8 @@
             name: cleanStreakName(student.name) || "student",
             streak: clampStreakNumber(student.streak, 0, 0, 999),
             target: clampStreakNumber(student.target, defaultTarget, 1, 99),
-            points: clampStreakNumber(student.points, 0, 0, 999)
+            points: clampStreakNumber(student.points, 0, 0, 999),
+            hidden: Boolean(student.hidden)
           }))
         };
       }
@@ -5047,6 +5133,28 @@
         });
       }
 
+      function renderStreakViewMode() {
+        viewButton.classList.toggle("is-active", !isStreakEditing);
+        editButton.classList.toggle("is-active", isStreakEditing);
+        viewButton.setAttribute("aria-pressed", String(!isStreakEditing));
+        editButton.setAttribute("aria-pressed", String(isStreakEditing));
+      }
+
+      function setStreakEditing(editing) {
+        isStreakEditing = editing;
+        renderStudents();
+        statusText.textContent = editing ? "editing streak students" : "streak counter view ready";
+      }
+
+      function setStudentHidden(id, hidden) {
+        const student = findStudent(id);
+        if (!student) return;
+        rememberStreakState();
+        student.hidden = hidden;
+        renderStudents();
+        saveStreakState(student.name.toLowerCase() + (hidden ? " hidden" : " shown"));
+      }
+
       function makeNumberCell(labelText, value, field, id, min, max) {
         const cell = document.createElement("div");
         cell.className = "streak-number-cell";
@@ -5089,9 +5197,14 @@
 
       function renderStudents() {
         studentList.replaceChildren();
-        emptyState.hidden = Boolean(streakState.students.length);
+        const students = isStreakEditing
+          ? streakState.students
+          : streakState.students.filter((student) => !student.hidden);
+        emptyState.hidden = Boolean(students.length);
+        emptyState.textContent = streakState.students.length ? "all kids hidden — edit to show one" : "no names yet";
+        renderStreakViewMode();
 
-        streakState.students.forEach((student) => {
+        students.forEach((student) => {
           const row = document.createElement("article");
           row.className = "streak-student-row";
           row.dataset.id = student.id;
@@ -5129,6 +5242,15 @@
           broke.dataset.action = "break";
           broke.dataset.id = student.id;
           actions.append(pass, broke);
+          if (isStreakEditing) {
+            const visibility = document.createElement("button");
+            visibility.type = "button";
+            visibility.textContent = student.hidden ? "show" : "hide";
+            visibility.dataset.action = "visibility";
+            visibility.dataset.id = student.id;
+            visibility.setAttribute("aria-label", (student.hidden ? "Show " : "Hide ") + student.name);
+            actions.appendChild(visibility);
+          }
 
           row.append(nameCell, streakCell, targetCell, pointsCell, actions);
           studentList.appendChild(row);
@@ -5493,6 +5615,10 @@
         }
         if (button.dataset.action === "pass") passStudent(button.dataset.id);
         if (button.dataset.action === "break") breakStudent(button.dataset.id);
+        if (button.dataset.action === "visibility") {
+          const student = findStudent(button.dataset.id);
+          if (student) setStudentHidden(student.id, !student.hidden);
+        }
       });
 
       studentList.addEventListener("change", (event) => {
@@ -5519,6 +5645,8 @@
 
       resetScoresButton.addEventListener("click", resetScores);
       copySummaryButton.addEventListener("click", copySummary);
+      viewButton.addEventListener("click", () => setStreakEditing(false));
+      editButton.addEventListener("click", () => setStreakEditing(true));
       pointsScreenButton.addEventListener("click", () => setScreen("points"));
       teamScreenButton.addEventListener("click", () => setScreen("team"));
       teamPassButton.addEventListener("click", () => {
