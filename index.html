@@ -327,6 +327,8 @@
     .counter-score {
       display: grid;
       place-items: center;
+      align-content: center;
+      gap: 5px;
       min-width: 0;
       color: var(--green);
       background: var(--black);
@@ -335,6 +337,14 @@
       font-weight: 500;
       line-height: 0.9;
       text-shadow: 0 0 2.4px currentColor;
+    }
+
+    .counter-daily-record {
+      font-size: clamp(13px, 3.5vw, 18px);
+      font-weight: 500;
+      line-height: 1;
+      text-transform: lowercase;
+      text-shadow: none;
     }
 
     .counter-actions {
@@ -426,6 +436,10 @@
       font-size: clamp(88px, 25vw, 190px);
     }
 
+    #multiplePanel.points-only .counter-daily-record {
+      font-size: clamp(18px, 4.8vw, 28px);
+    }
+
     .streak-points-only-score {
       display: grid;
       place-items: center;
@@ -504,6 +518,8 @@
     .multiple-settings {
       display: flex;
       justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 8px;
     }
 
     #multipleLeader[hidden] {
@@ -1842,6 +1858,10 @@
           </div>
         </div>
         <div class="multiple-settings">
+          <label class="multiple-setting" for="showMultipleDailyRecords">
+            <input id="showMultipleDailyRecords" type="checkbox">
+            show today's records
+          </label>
           <label class="multiple-setting" for="showMultipleLeader">
             <input id="showMultipleLeader" type="checkbox" checked>
             show leader box
@@ -2223,6 +2243,7 @@
       streak: document.getElementById("streakPanel")
     };
     const multipleLeader = document.getElementById("multipleLeader");
+    const showMultipleDailyRecords = document.getElementById("showMultipleDailyRecords");
     const showMultipleLeader = document.getElementById("showMultipleLeader");
     const multipleList = document.getElementById("multipleList");
     const resetMultiple = document.getElementById("resetMultiple");
@@ -2335,6 +2356,9 @@
       mode: "single",
       single: 0,
       multiple: [],
+      showMultipleDailyRecords: false,
+      multipleDailyRecordDate: "",
+      multipleDailyRecords: {},
       showMultipleLeader: true,
       classes: [],
       selectedClassId: null,
@@ -2387,6 +2411,59 @@
 
     function normalizeMultipleName(value) {
       return normalizeName(value).toLowerCase();
+    }
+
+    function getLocalDateKey(date = new Date()) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return year + "-" + month + "-" + day;
+    }
+
+    function normalizeMultipleDailyRecords(rawRecords) {
+      const records = {};
+      if (!rawRecords || typeof rawRecords !== "object") return records;
+
+      Object.entries(rawRecords).forEach(([name, score]) => {
+        const key = normalizeMultipleName(name);
+        const value = Math.max(0, Math.round(Number(score) || 0));
+        if (key && value > 0) records[key] = Math.max(records[key] || 0, value);
+      });
+      return records;
+    }
+
+    function ensureMultipleDailyRecordsCurrent() {
+      const today = getLocalDateKey();
+      if (state.multipleDailyRecordDate === today) return false;
+      state.multipleDailyRecordDate = today;
+      state.multipleDailyRecords = {};
+      return true;
+    }
+
+    function getMultipleDailyRecord(name) {
+      ensureMultipleDailyRecordsCurrent();
+      return state.multipleDailyRecords[normalizeMultipleName(name)] || 0;
+    }
+
+    function updateMultipleDailyRecord(item) {
+      ensureMultipleDailyRecordsCurrent();
+      const key = normalizeMultipleName(item?.name);
+      const score = Math.max(0, Math.round(Number(item?.score) || 0));
+      if (!key || score <= (state.multipleDailyRecords[key] || 0)) return false;
+      state.multipleDailyRecords[key] = score;
+      return true;
+    }
+
+    function moveMultipleDailyRecord(oldName, newName) {
+      ensureMultipleDailyRecordsCurrent();
+      const oldKey = normalizeMultipleName(oldName);
+      const newKey = normalizeMultipleName(newName);
+      if (!oldKey || !newKey || oldKey === newKey) return;
+      const oldRecord = state.multipleDailyRecords[oldKey] || 0;
+      if (oldRecord > 0) {
+        state.multipleDailyRecords[newKey] = Math.max(state.multipleDailyRecords[newKey] || 0, oldRecord);
+        delete state.multipleDailyRecords[oldKey];
+      }
     }
 
     function getKeyboardLabel(target) {
@@ -3270,6 +3347,9 @@
             if (Array.isArray(saved.individuals)) oldCounters.push(...saved.individuals);
             state.multiple = normalizeCounters(oldCounters, "group");
           }
+          state.showMultipleDailyRecords = saved.showMultipleDailyRecords === true;
+          state.multipleDailyRecordDate = typeof saved.multipleDailyRecordDate === "string" ? saved.multipleDailyRecordDate : "";
+          state.multipleDailyRecords = normalizeMultipleDailyRecords(saved.multipleDailyRecords);
           state.showMultipleLeader = saved.showMultipleLeader !== false;
 
           state.classes = normalizeClasses(saved.classes);
@@ -3289,12 +3369,21 @@
       } catch (error) {
         state.mode = "single";
         state.multiple = [];
+        state.showMultipleDailyRecords = false;
+        state.multipleDailyRecordDate = "";
+        state.multipleDailyRecords = {};
         state.showMultipleLeader = true;
         state.classes = [];
         state.selectedClassId = null;
         state.lists = [];
         state.selectedListId = null;
         state.listSeedVersion = 0;
+      }
+
+      const missingDailyRecordDate = !state.multipleDailyRecordDate;
+      const dailyRecordsReset = ensureMultipleDailyRecordsCurrent();
+      if (missingDailyRecordDate && dailyRecordsReset) {
+        state.multiple.forEach(updateMultipleDailyRecord);
       }
 
       if (state.listSeedVersion < DEFAULT_LIST_SEED_VERSION) {
@@ -3588,6 +3677,25 @@
       return state.multiple.filter((counter) => !counter.hidden);
     }
 
+    function createMultipleScore(item) {
+      const score = document.createElement("div");
+      score.className = "counter-score";
+
+      const value = document.createElement("span");
+      value.className = "counter-score-value";
+      value.textContent = item.score;
+      score.appendChild(value);
+
+      if (state.showMultipleDailyRecords) {
+        const record = document.createElement("span");
+        record.className = "counter-daily-record";
+        record.textContent = "best today: " + getMultipleDailyRecord(item.name);
+        score.appendChild(record);
+      }
+
+      return score;
+    }
+
     function renderMultipleViewMode() {
       multipleViewButton.classList.toggle("is-active", !isMultipleEditing);
       multipleEditButton.classList.toggle("is-active", isMultipleEditing);
@@ -3662,7 +3770,9 @@
           return true;
         }
 
+        const oldName = currentItem.name;
         currentItem.name = name;
+        moveMultipleDailyRecord(oldName, name);
         saveState();
         renderMultiple();
         statusbar.textContent = name + " renamed";
@@ -3702,10 +3812,11 @@
         card.dataset.counterId = item.id;
 
         if (!isMultipleEditing) {
-          card.setAttribute("aria-label", item.name + ": " + item.score + " points");
-          const score = document.createElement("div");
-          score.className = "counter-score";
-          score.textContent = item.score;
+          const dailyRecordText = state.showMultipleDailyRecords
+            ? ", best today " + getMultipleDailyRecord(item.name)
+            : "";
+          card.setAttribute("aria-label", item.name + ": " + item.score + " points" + dailyRecordText);
+          const score = createMultipleScore(item);
           card.appendChild(score);
           multipleList.appendChild(card);
           return;
@@ -3718,9 +3829,7 @@
         name.setAttribute("aria-label", "Edit " + item.name);
         name.addEventListener("click", () => editCounterName(item, name));
 
-        const score = document.createElement("div");
-        score.className = "counter-score";
-        score.textContent = item.score;
+        const score = createMultipleScore(item);
 
         const actions = document.createElement("div");
         actions.className = "counter-actions wide";
@@ -3942,10 +4051,12 @@
     }
 
     function renderMultiple() {
+      if (ensureMultipleDailyRecordsCurrent()) saveState();
       renderClassRosterControls();
       renderCounterList();
       multipleLeader.textContent = getLeader(getVisibleCounters(), "multiple points");
       multipleLeader.hidden = !state.showMultipleLeader;
+      showMultipleDailyRecords.checked = state.showMultipleDailyRecords;
       showMultipleLeader.checked = state.showMultipleLeader;
       renderMultipleViewMode();
     }
@@ -4288,10 +4399,13 @@
 
       cancelCounterClear(false);
       item.score += amount;
+      const newBest = amount > 0 && updateMultipleDailyRecord(item);
       saveState();
       renderMultiple();
       playSound(amount > 0 ? "plus" : "minus", item.score);
-      statusbar.textContent = item.name + (amount > 0 ? " +1" : " -1");
+      statusbar.textContent = newBest
+        ? item.name + " new best: " + item.score
+        : item.name + (amount > 0 ? " +1" : " -1");
 
       flash(getCounterCard(item.id) || element, amount > 0 ? "plus" : "minus");
     }
@@ -4775,6 +4889,12 @@
     removeMultiple.addEventListener("click", openRemoveDialog);
     multipleViewButton.addEventListener("click", () => setMultipleEditing(false));
     multipleEditButton.addEventListener("click", () => setMultipleEditing(true));
+    showMultipleDailyRecords.addEventListener("change", () => {
+      state.showMultipleDailyRecords = showMultipleDailyRecords.checked;
+      saveState();
+      renderMultiple();
+      statusbar.textContent = state.showMultipleDailyRecords ? "today's records shown" : "today's records hidden";
+    });
     showMultipleLeader.addEventListener("change", () => {
       state.showMultipleLeader = showMultipleLeader.checked;
       saveState();
