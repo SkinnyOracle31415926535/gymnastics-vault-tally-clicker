@@ -391,6 +391,54 @@
       text-transform: lowercase;
     }
 
+    /* View mode is intentionally a scoreboard: only each visible score stays
+       on screen. Re-open the current mode from the title menu to edit. */
+    #multiplePanel.points-only,
+    #streakPanel.points-only,
+    #streakPanel.points-only #streakPointsScreenView {
+      gap: 0;
+    }
+
+    #multiplePanel.points-only > :not(#multipleList),
+    #streakPanel.points-only > :not(#streakPointsScreenView),
+    #streakPanel.points-only #streakPointsScreenView > :not(#streakStudentList) {
+      display: none !important;
+    }
+
+    #multiplePanel.points-only .counter-list,
+    #streakPanel.points-only .streak-student-list {
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }
+
+    #multiplePanel.points-only .counter-card,
+    #streakPanel.points-only .streak-student-row {
+      display: block;
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+    }
+
+    #multiplePanel.points-only .counter-score,
+    .streak-points-only-score {
+      min-height: min(46vh, 300px);
+      font-size: clamp(88px, 25vw, 190px);
+    }
+
+    .streak-points-only-score {
+      display: grid;
+      place-items: center;
+      min-width: 0;
+      padding: 10px;
+      color: var(--green);
+      background: var(--black);
+      border: 4px solid var(--black);
+      font-weight: 500;
+      line-height: 0.9;
+      text-shadow: 0 0 2.4px currentColor;
+    }
+
     .list-toolbar {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3545,6 +3593,7 @@
       multipleEditButton.classList.toggle("is-active", isMultipleEditing);
       multipleViewButton.setAttribute("aria-pressed", String(!isMultipleEditing));
       multipleEditButton.setAttribute("aria-pressed", String(isMultipleEditing));
+      panels.multiple.classList.toggle("points-only", !isMultipleEditing);
       addMultiple.hidden = !isMultipleEditing;
       removeMultiple.hidden = !isMultipleEditing;
     }
@@ -3652,14 +3701,22 @@
         card.className = "counter-card";
         card.dataset.counterId = item.id;
 
-        const name = document.createElement(isMultipleEditing ? "button" : "div");
-        name.className = "counter-name";
-        name.textContent = item.name + (isMultipleEditing && item.hidden ? " (hidden)" : "");
-        if (isMultipleEditing) {
-          name.type = "button";
-          name.setAttribute("aria-label", "Edit " + item.name);
-          name.addEventListener("click", () => editCounterName(item, name));
+        if (!isMultipleEditing) {
+          card.setAttribute("aria-label", item.name + ": " + item.score + " points");
+          const score = document.createElement("div");
+          score.className = "counter-score";
+          score.textContent = item.score;
+          card.appendChild(score);
+          multipleList.appendChild(card);
+          return;
         }
+
+        const name = document.createElement("button");
+        name.className = "counter-name";
+        name.textContent = item.name + (item.hidden ? " (hidden)" : "");
+        name.type = "button";
+        name.setAttribute("aria-label", "Edit " + item.name);
+        name.addEventListener("click", () => editCounterName(item, name));
 
         const score = document.createElement("div");
         score.className = "counter-score";
@@ -3690,15 +3747,13 @@
         clear.addEventListener("click", () => clearMultipleCounter(item.id));
 
         actions.append(plus, minus, clear);
-        if (isMultipleEditing) {
-          const visibility = document.createElement("button");
-          visibility.type = "button";
-          visibility.className = "counter-visibility";
-          visibility.textContent = item.hidden ? "show" : "hide";
-          visibility.setAttribute("aria-label", (item.hidden ? "Show " : "Hide ") + item.name);
-          visibility.addEventListener("click", () => setCounterHidden(item.id, !item.hidden));
-          actions.appendChild(visibility);
-        }
+        const visibility = document.createElement("button");
+        visibility.type = "button";
+        visibility.className = "counter-visibility";
+        visibility.textContent = item.hidden ? "show" : "hide";
+        visibility.setAttribute("aria-label", (item.hidden ? "Show " : "Hide ") + item.name);
+        visibility.addEventListener("click", () => setCounterHidden(item.id, !item.hidden));
+        actions.appendChild(visibility);
         card.append(name, score, actions);
         multipleList.appendChild(card);
       });
@@ -4203,11 +4258,19 @@
     function setMode(mode) {
       if (bratKeyboardState) finishBratKeyboard(bratKeyboardState.isFormField ? "hide" : "cancel");
       cancelCounterClear(false);
+      const reopeningCurrentMode = mode === state.mode;
       state.mode = mode;
-      if (mode !== "multiple") isMultipleEditing = false;
+      isMultipleEditing = mode === "multiple" && reopeningCurrentMode;
+      if (mode === "streak") streakCounter.setEditing(reopeningCurrentMode);
       setMenuOpen(false);
       render();
-      statusbar.textContent = mode === "multiple" ? "multiple points" : mode === "list" ? "TODOs" : mode === "streak" ? "streak counter" : "single points";
+      statusbar.textContent = mode === "multiple"
+        ? (isMultipleEditing ? "editing multiple counters" : "multiple points")
+        : mode === "list"
+          ? "TODOs"
+          : mode === "streak"
+            ? (reopeningCurrentMode ? "editing streak students" : "streak counter")
+            : "single points";
     }
 
     function changeSingle(amount, kind) {
@@ -5138,6 +5201,7 @@
         editButton.classList.toggle("is-active", isStreakEditing);
         viewButton.setAttribute("aria-pressed", String(!isStreakEditing));
         editButton.setAttribute("aria-pressed", String(isStreakEditing));
+        panel.classList.toggle("points-only", !isStreakEditing && streakState.screen === "points");
       }
 
       function setStreakEditing(editing) {
@@ -5208,6 +5272,16 @@
           const row = document.createElement("article");
           row.className = "streak-student-row";
           row.dataset.id = student.id;
+
+          if (!isStreakEditing) {
+            row.setAttribute("aria-label", student.name + ": " + student.points + " points");
+            const score = document.createElement("div");
+            score.className = "streak-points-only-score";
+            score.textContent = student.points;
+            row.appendChild(score);
+            studentList.appendChild(row);
+            return;
+          }
 
           const nameCell = document.createElement("div");
           nameCell.className = "streak-name-cell";
@@ -5704,6 +5778,9 @@
           if (streakState.activeClassId !== classId) return;
           streakState.activeClassId = null;
           saveStreakState();
+        },
+        setEditing(editing) {
+          isStreakEditing = Boolean(editing);
         },
         render: renderAll
       };
