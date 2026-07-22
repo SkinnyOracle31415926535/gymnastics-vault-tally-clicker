@@ -33,6 +33,16 @@
       -webkit-text-size-adjust: 100%;
     }
 
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 9;
+      pointer-events: none;
+      -webkit-backdrop-filter: blur(var(--ui-blur));
+      backdrop-filter: blur(var(--ui-blur));
+    }
+
     body::after {
       content: "";
       position: fixed;
@@ -378,6 +388,14 @@
       text-transform: lowercase;
     }
 
+    .multiple-controls {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .multiple-controls .clear {
+      grid-column: 1 / -1;
+    }
+
     .mode-view-actions {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -402,7 +420,7 @@
     }
 
     /* View mode is intentionally a scoreboard: only each visible score stays
-       on screen. Re-open the current mode from the title menu to edit. */
+       on screen. */
     #multiplePanel.points-only,
     #streakPanel.points-only,
     #streakPanel.points-only #streakPointsScreenView {
@@ -1661,36 +1679,21 @@
       text-shadow: 0 0 1.4px rgba(5, 5, 5, 0.38);
     }
 
-    .window,
     .counter-dialog,
     .brat-keyboard-dock,
     .brat-field-caret,
     .skill-flash,
     .celebration,
-    .streak-celebration,
-    body::after {
+    .streak-celebration {
       filter: blur(var(--ui-blur));
     }
 
-    .window *,
     .counter-dialog *,
     .brat-keyboard-dock *,
     .skill-flash *,
     .celebration *,
     .streak-celebration * {
       filter: none;
-    }
-
-    .celebration .celebration-chant {
-      filter: blur(2.4px);
-    }
-
-    .celebration .celebration-close {
-      filter: blur(1.5px);
-    }
-
-    .skill-flash .skill-flash-copy {
-      filter: blur(1.8px);
     }
 
     @media (max-width: 560px) {
@@ -1710,6 +1713,10 @@
       .list-actions,
       .list-reset-actions {
         grid-template-columns: 1fr;
+      }
+
+      .multiple-controls {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
 
       .class-roster-actions {
@@ -1832,15 +1839,12 @@
 
       <section id="multiplePanel" class="panel" aria-label="Multiple point counters">
         <div id="multipleLeader" class="display label-display" aria-live="polite">multiple points</div>
-        <div class="mode-view-actions" role="group" aria-label="Multiple counter mode">
-          <button id="multipleViewButton" class="is-active" type="button" aria-pressed="true">view</button>
-          <button id="multipleEditButton" type="button" aria-pressed="false">edit</button>
-        </div>
         <div id="multipleList" class="counter-list"></div>
-        <div class="controls">
+        <div class="controls multiple-controls">
           <button id="resetMultiple" class="clear" type="button">reset multiple</button>
           <button id="addMultiple" class="multiple-action" type="button">add</button>
           <button id="removeMultiple" class="multiple-action remove-action" type="button">remove</button>
+          <button id="multipleEditButton" class="multiple-action" type="button" aria-pressed="true">edit</button>
         </div>
         <div id="multipleClassSlot" class="class-roster-slot">
           <div id="classRosterPanel" class="class-roster-panel" aria-label="Saved class rosters">
@@ -1902,16 +1906,16 @@
 
         <div class="list-actions">
           <button id="addSkill" type="button">add skill</button>
-          <button id="editTodo" type="button" aria-pressed="false">edit</button>
+          <button id="editTodo" type="button" aria-pressed="false">hide skill</button>
         </div>
+
+        <select id="listSelector" class="list-select" aria-label="Choose a TODO"></select>
 
         <div class="list-toolbar">
           <button id="newList" type="button">new</button>
           <button id="renameList" type="button">rename</button>
           <button id="deleteList" class="delete-list" type="button">delete</button>
         </div>
-
-        <select id="listSelector" class="list-select" aria-label="Choose a TODO"></select>
 
         <div class="list-reset-actions">
           <button id="resetTodo" class="todo-reset" type="button">reset all</button>
@@ -2249,7 +2253,6 @@
     const resetMultiple = document.getElementById("resetMultiple");
     const addMultiple = document.getElementById("addMultiple");
     const removeMultiple = document.getElementById("removeMultiple");
-    const multipleViewButton = document.getElementById("multipleViewButton");
     const multipleEditButton = document.getElementById("multipleEditButton");
     const addDialog = document.getElementById("addDialog");
     const addCounterForm = document.getElementById("addCounterForm");
@@ -3697,9 +3700,7 @@
     }
 
     function renderMultipleViewMode() {
-      multipleViewButton.classList.toggle("is-active", !isMultipleEditing);
       multipleEditButton.classList.toggle("is-active", isMultipleEditing);
-      multipleViewButton.setAttribute("aria-pressed", String(!isMultipleEditing));
       multipleEditButton.setAttribute("aria-pressed", String(isMultipleEditing));
       panels.multiple.classList.toggle("points-only", !isMultipleEditing);
       addMultiple.hidden = !isMultipleEditing;
@@ -4153,7 +4154,7 @@
       }
       listPanel.classList.toggle("is-editing", isListEditing);
       editTodo.disabled = !hasList;
-      editTodo.textContent = isListEditing ? "done" : "edit";
+      editTodo.textContent = isListEditing ? "done" : "hide skill";
       editTodo.setAttribute("aria-pressed", isListEditing ? "true" : "false");
 
       listSelector.innerHTML = "";
@@ -4886,7 +4887,6 @@
     resetMultiple.addEventListener("click", () => openResetDialog("multiple"));
     addMultiple.addEventListener("click", openAddDialog);
     removeMultiple.addEventListener("click", openRemoveDialog);
-    multipleViewButton.addEventListener("click", () => setMultipleEditing(false));
     multipleEditButton.addEventListener("click", () => setMultipleEditing(true));
     showMultipleDailyRecords.addEventListener("change", () => {
       state.showMultipleDailyRecords = showMultipleDailyRecords.checked;
