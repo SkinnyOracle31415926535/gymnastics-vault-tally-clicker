@@ -2380,7 +2380,7 @@
     let selectedSkillEditId = null;
     let skillFlashTimer = null;
     let isListEditing = false;
-    let isMultipleEditing = false;
+    let isMultipleEditing = true;
     let draggedSkillId = null;
     let bratKeyboardState = null;
     let bratKeyboardShifted = false;
@@ -4369,10 +4369,9 @@
     function setMode(mode) {
       if (bratKeyboardState) finishBratKeyboard(bratKeyboardState.isFormField ? "hide" : "cancel");
       cancelCounterClear(false);
-      const reopeningCurrentMode = mode === state.mode;
       state.mode = mode;
-      isMultipleEditing = mode === "multiple" && reopeningCurrentMode;
-      if (mode === "streak") streakCounter.setEditing(reopeningCurrentMode);
+      isMultipleEditing = mode === "multiple";
+      if (mode === "streak") streakCounter.setEditing(true);
       setMenuOpen(false);
       render();
       statusbar.textContent = mode === "multiple"
@@ -4380,7 +4379,7 @@
         : mode === "list"
           ? "TODOs"
           : mode === "streak"
-            ? (reopeningCurrentMode ? "editing streak students" : "streak counter")
+            ? "editing streak students"
             : "single points";
     }
 
@@ -5054,7 +5053,7 @@
       let teamResetArmed = false;
       let undoStack = [];
       let redoStack = [];
-      let isStreakEditing = false;
+      let isStreakEditing = true;
       let streakState = makeEmptyStreakState();
 
       function makeStreakId() {
