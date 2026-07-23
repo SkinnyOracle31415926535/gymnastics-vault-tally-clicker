@@ -19,7 +19,7 @@
       --green: #8ace00;
       --black: #050505;
       --white: #ffffff;
-      --ui-blur: 0.5px;
+      --ui-blur: 1.2px;
     }
 
     body {
@@ -53,7 +53,7 @@
         repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.07) 0, rgba(255, 255, 255, 0.07) 1px, transparent 1px, transparent 4px),
         repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.045) 0, rgba(0, 0, 0, 0.045) 1px, transparent 1px, transparent 5px);
       mix-blend-mode: soft-light;
-      opacity: 0.42;
+      opacity: 0.58;
     }
 
     button,
@@ -419,27 +419,23 @@
       text-transform: lowercase;
     }
 
-    /* View mode is intentionally a scoreboard: only each visible score stays
-       on screen. */
-    #multiplePanel.points-only,
+    /* The streak counter keeps its score-only screen. Multiple mode instead
+       uses the compact active-practice screen below. */
     #streakPanel.points-only,
     #streakPanel.points-only #streakPointsScreenView {
       gap: 0;
     }
 
-    #multiplePanel.points-only > :not(#multipleList),
     #streakPanel.points-only > :not(#streakPointsScreenView),
     #streakPanel.points-only #streakPointsScreenView > :not(#streakStudentList) {
       display: none !important;
     }
 
-    #multiplePanel.points-only .counter-list,
     #streakPanel.points-only .streak-student-list {
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 10px;
     }
 
-    #multiplePanel.points-only .counter-card,
     #streakPanel.points-only .streak-student-row {
       display: block;
       min-height: 0;
@@ -448,14 +444,97 @@
       background: transparent;
     }
 
-    #multiplePanel.points-only .counter-score,
     .streak-points-only-score {
       min-height: min(46vh, 300px);
       font-size: clamp(88px, 25vw, 190px);
     }
 
-    #multiplePanel.points-only .counter-daily-record {
-      font-size: clamp(18px, 4.8vw, 28px);
+    .multiple-practice-footer {
+      display: none;
+    }
+
+    /* Active practice is deliberately all function: one compact, tappable
+       athlete row at a time, with no setup controls in the way. */
+    body.multiple-practice-view .window {
+      height: calc(100dvh - 28px);
+      min-height: 0;
+      grid-template-rows: minmax(0, 1fr);
+    }
+
+    body.multiple-practice-view .titlebar,
+    body.multiple-practice-view .mode-menu,
+    body.multiple-practice-view .statusbar {
+      display: none;
+    }
+
+    body.multiple-practice-view .content {
+      min-height: 0;
+      padding: 8px;
+    }
+
+    #multiplePanel.practice-view {
+      min-height: 0;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 8px;
+    }
+
+    #multiplePanel.practice-view > :not(#multipleList):not(.multiple-practice-footer) {
+      display: none !important;
+    }
+
+    #multiplePanel.practice-view .counter-list {
+      min-height: 0;
+      grid-template-rows: repeat(var(--practice-row-count, 1), minmax(58px, 1fr));
+      grid-auto-rows: minmax(58px, 1fr);
+      gap: 6px;
+      align-content: stretch;
+      overflow-y: auto;
+    }
+
+    #multiplePanel.practice-view .counter-card {
+      grid-template-columns: minmax(0, 1fr) minmax(64px, 88px) repeat(3, minmax(52px, 66px));
+      min-height: 0;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    #multiplePanel.practice-view .counter-name {
+      padding: 4px;
+      font-size: clamp(18px, 3.2vh, 28px);
+    }
+
+    #multiplePanel.practice-view .counter-score {
+      min-height: 0;
+      border-width: 3px;
+      font-size: clamp(28px, 5.5vh, 46px);
+    }
+
+    #multiplePanel.practice-view .counter-actions {
+      display: contents;
+      grid-column: auto;
+    }
+
+    #multiplePanel.practice-view .counter-actions button {
+      min-height: 0;
+      padding: 2px;
+      font-size: clamp(28px, 5vh, 42px);
+    }
+
+    #multiplePanel.practice-view .counter-actions .counter-clear {
+      font-size: clamp(14px, 2.5vh, 20px);
+    }
+
+    #multiplePanel.practice-view .multiple-practice-footer {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    #multiplePanel.practice-view .multiple-practice-footer button {
+      min-height: 52px;
+      padding: 4px 6px;
+      font-size: clamp(16px, 3vw, 24px);
+      text-transform: lowercase;
     }
 
     .streak-points-only-score {
@@ -1844,7 +1923,13 @@
           <button id="resetMultiple" class="clear" type="button">reset multiple</button>
           <button id="addMultiple" class="multiple-action" type="button">add</button>
           <button id="removeMultiple" class="multiple-action remove-action" type="button">remove</button>
+          <button id="multipleViewButton" class="multiple-action" type="button" aria-pressed="false">view</button>
           <button id="multipleEditButton" class="multiple-action" type="button" aria-pressed="true">edit</button>
+        </div>
+        <div id="multiplePracticeFooter" class="multiple-practice-footer" hidden>
+          <button id="multipleScoresButton" type="button" aria-pressed="false">hide scores</button>
+          <button id="resetMultipleView" type="button">reset all</button>
+          <button id="exitMultipleView" type="button">exit view</button>
         </div>
         <div id="multipleClassSlot" class="class-roster-slot">
           <div id="classRosterPanel" class="class-roster-panel" aria-label="Saved class rosters">
@@ -2253,7 +2338,12 @@
     const resetMultiple = document.getElementById("resetMultiple");
     const addMultiple = document.getElementById("addMultiple");
     const removeMultiple = document.getElementById("removeMultiple");
+    const multipleViewButton = document.getElementById("multipleViewButton");
     const multipleEditButton = document.getElementById("multipleEditButton");
+    const multiplePracticeFooter = document.getElementById("multiplePracticeFooter");
+    const multipleScoresButton = document.getElementById("multipleScoresButton");
+    const resetMultipleView = document.getElementById("resetMultipleView");
+    const exitMultipleView = document.getElementById("exitMultipleView");
     const addDialog = document.getElementById("addDialog");
     const addCounterForm = document.getElementById("addCounterForm");
     const addCounterName = document.getElementById("addCounterName");
@@ -2384,6 +2474,7 @@
     let skillFlashTimer = null;
     let isListEditing = false;
     let isMultipleEditing = true;
+    let areMultipleScoresHidden = false;
     let draggedSkillId = null;
     let bratKeyboardState = null;
     let bratKeyboardShifted = false;
@@ -3680,16 +3771,20 @@
       return state.multiple.filter((counter) => !counter.hidden);
     }
 
-    function createMultipleScore(item) {
+    function createMultipleScore(item, options = {}) {
+      const {
+        hideValue = false,
+        showDailyRecord = state.showMultipleDailyRecords
+      } = options;
       const score = document.createElement("div");
       score.className = "counter-score";
 
       const value = document.createElement("span");
       value.className = "counter-score-value";
-      value.textContent = item.score;
+      value.textContent = hideValue ? "?" : item.score;
       score.appendChild(value);
 
-      if (state.showMultipleDailyRecords) {
+      if (showDailyRecord && !hideValue) {
         const record = document.createElement("span");
         record.className = "counter-daily-record";
         record.textContent = "best today: " + getMultipleDailyRecord(item.name);
@@ -3700,11 +3795,18 @@
     }
 
     function renderMultipleViewMode() {
+      const isPracticeView = state.mode === "multiple" && !isMultipleEditing;
+      multipleViewButton.classList.toggle("is-active", isPracticeView);
+      multipleViewButton.setAttribute("aria-pressed", String(isPracticeView));
       multipleEditButton.classList.toggle("is-active", isMultipleEditing);
       multipleEditButton.setAttribute("aria-pressed", String(isMultipleEditing));
-      panels.multiple.classList.toggle("points-only", !isMultipleEditing);
+      panels.multiple.classList.toggle("practice-view", isPracticeView);
+      document.body.classList.toggle("multiple-practice-view", isPracticeView);
       addMultiple.hidden = !isMultipleEditing;
       removeMultiple.hidden = !isMultipleEditing;
+      multiplePracticeFooter.hidden = !isPracticeView;
+      multipleScoresButton.textContent = areMultipleScoresHidden ? "reveal scores" : "hide scores";
+      multipleScoresButton.setAttribute("aria-pressed", String(areMultipleScoresHidden));
     }
 
     function setMultipleEditing(editing) {
@@ -3798,6 +3900,11 @@
       multipleList.innerHTML = "";
 
       const counters = isMultipleEditing ? state.multiple : getVisibleCounters();
+      if (isMultipleEditing) {
+        multipleList.style.removeProperty("--practice-row-count");
+      } else {
+        multipleList.style.setProperty("--practice-row-count", String(Math.max(1, Math.min(counters.length, 9))));
+      }
 
       if (!counters.length) {
         const empty = document.createElement("div");
@@ -3813,24 +3920,22 @@
         card.dataset.counterId = item.id;
 
         if (!isMultipleEditing) {
-          const dailyRecordText = state.showMultipleDailyRecords
-            ? ", best today " + getMultipleDailyRecord(item.name)
-            : "";
-          card.setAttribute("aria-label", item.name + ": " + item.score + " points" + dailyRecordText);
-          const score = createMultipleScore(item);
-          card.appendChild(score);
-          multipleList.appendChild(card);
-          return;
+          card.setAttribute("aria-label", item.name + ": " + (areMultipleScoresHidden ? "score hidden" : item.score + " points"));
         }
 
-        const name = document.createElement("button");
+        const name = document.createElement(isMultipleEditing ? "button" : "div");
         name.className = "counter-name";
         name.textContent = item.name + (item.hidden ? " (hidden)" : "");
-        name.type = "button";
-        name.setAttribute("aria-label", "Edit " + item.name);
-        name.addEventListener("click", () => editCounterName(item, name));
+        if (isMultipleEditing) {
+          name.type = "button";
+          name.setAttribute("aria-label", "Edit " + item.name);
+          name.addEventListener("click", () => editCounterName(item, name));
+        }
 
-        const score = createMultipleScore(item);
+        const score = createMultipleScore(item, {
+          hideValue: !isMultipleEditing && areMultipleScoresHidden,
+          showDailyRecord: isMultipleEditing && state.showMultipleDailyRecords
+        });
 
         const actions = document.createElement("div");
         actions.className = "counter-actions wide";
@@ -3851,19 +3956,21 @@
         const clearIsArmed = armedCounterClearId === item.id;
         clear.type = "button";
         clear.className = "counter-clear" + (clearIsArmed ? " armed" : "");
-        clear.textContent = clearIsArmed ? "confirm" : "clear";
+        clear.textContent = clearIsArmed ? "confirm" : (isMultipleEditing ? "clear" : "reset");
         clear.setAttribute("aria-pressed", String(clearIsArmed));
-        clear.setAttribute("aria-label", clearIsArmed ? "Confirm clearing " + item.name : "Clear points for " + item.name);
+        clear.setAttribute("aria-label", clearIsArmed ? "Confirm resetting " + item.name : (isMultipleEditing ? "Clear points for " : "Reset points for ") + item.name);
         clear.addEventListener("click", () => clearMultipleCounter(item.id));
 
         actions.append(plus, minus, clear);
-        const visibility = document.createElement("button");
-        visibility.type = "button";
-        visibility.className = "counter-visibility";
-        visibility.textContent = item.hidden ? "show" : "hide";
-        visibility.setAttribute("aria-label", (item.hidden ? "Show " : "Hide ") + item.name);
-        visibility.addEventListener("click", () => setCounterHidden(item.id, !item.hidden));
-        actions.appendChild(visibility);
+        if (isMultipleEditing) {
+          const visibility = document.createElement("button");
+          visibility.type = "button";
+          visibility.className = "counter-visibility";
+          visibility.textContent = item.hidden ? "show" : "hide";
+          visibility.setAttribute("aria-label", (item.hidden ? "Show " : "Hide ") + item.name);
+          visibility.addEventListener("click", () => setCounterHidden(item.id, !item.hidden));
+          actions.appendChild(visibility);
+        }
         card.append(name, score, actions);
         multipleList.appendChild(card);
       });
@@ -4887,7 +4994,15 @@
     resetMultiple.addEventListener("click", () => openResetDialog("multiple"));
     addMultiple.addEventListener("click", openAddDialog);
     removeMultiple.addEventListener("click", openRemoveDialog);
+    multipleViewButton.addEventListener("click", () => setMultipleEditing(false));
     multipleEditButton.addEventListener("click", () => setMultipleEditing(true));
+    multipleScoresButton.addEventListener("click", () => {
+      areMultipleScoresHidden = !areMultipleScoresHidden;
+      renderMultiple();
+      statusbar.textContent = areMultipleScoresHidden ? "multiple scores hidden" : "multiple scores revealed";
+    });
+    resetMultipleView.addEventListener("click", () => openResetDialog("multiple"));
+    exitMultipleView.addEventListener("click", () => setMultipleEditing(true));
     showMultipleDailyRecords.addEventListener("change", () => {
       state.showMultipleDailyRecords = showMultipleDailyRecords.checked;
       saveState();
