@@ -217,6 +217,157 @@
       display: grid;
     }
 
+    .stopwatch-panel {
+      gap: 14px;
+    }
+
+    .stopwatch-header,
+    .stopwatch-setup,
+    .stopwatch-roster,
+    .stopwatch-timer {
+      display: grid;
+      gap: 10px;
+    }
+
+    .stopwatch-title {
+      margin: 0;
+      font-size: clamp(42px, 12vw, 76px);
+      font-weight: 500;
+      line-height: 0.9;
+      text-transform: lowercase;
+      text-shadow: 0 0 2px rgba(5, 5, 5, 0.48);
+    }
+
+    .stopwatch-card,
+    .stopwatch-timer-readout {
+      border: 4px solid var(--black);
+    }
+
+    .stopwatch-card {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+    }
+
+    .stopwatch-class-name {
+      font-size: clamp(28px, 8vw, 46px);
+      font-weight: 500;
+      line-height: 0.95;
+      overflow-wrap: anywhere;
+      text-transform: lowercase;
+    }
+
+    .stopwatch-note,
+    .stopwatch-roster-note {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 500;
+      line-height: 1.05;
+      text-transform: lowercase;
+    }
+
+    .stopwatch-actions,
+    .stopwatch-timer-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .stopwatch-actions button,
+    .stopwatch-timer-actions button,
+    .stopwatch-hold-exit {
+      min-height: 62px;
+      font-size: clamp(22px, 5vw, 32px);
+      text-transform: lowercase;
+    }
+
+    .stopwatch-play {
+      color: var(--green);
+      background: var(--black);
+    }
+
+    .stopwatch-roster-dialog {
+      width: min(720px, calc(100% - 24px));
+    }
+
+    .stopwatch-roster-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      min-height: 64px;
+      padding: 10px;
+      color: var(--black);
+      background: var(--green);
+      border: 4px solid var(--black);
+      text-align: left;
+      text-transform: lowercase;
+    }
+
+    .stopwatch-roster-row:hover,
+    .stopwatch-roster-row:focus-visible {
+      color: var(--green);
+      background: var(--black);
+      outline: none;
+    }
+
+    .stopwatch-student-name {
+      min-width: 0;
+      font-size: clamp(24px, 6vw, 38px);
+      font-weight: 500;
+      line-height: 0.95;
+      overflow-wrap: anywhere;
+    }
+
+    .stopwatch-rank,
+    .stopwatch-record {
+      font-size: clamp(18px, 4vw, 28px);
+      font-weight: 500;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .stopwatch-rank {
+      padding: 5px 7px;
+      color: var(--green);
+      background: var(--black);
+    }
+
+    .stopwatch-record.empty {
+      opacity: 0.7;
+    }
+
+    .stopwatch-timer-readout {
+      display: grid;
+      min-height: min(42vw, 250px);
+      place-items: center;
+      padding: 14px;
+      color: var(--green);
+      background: var(--black);
+      font-size: clamp(68px, 19vw, 132px);
+      font-weight: 500;
+      line-height: 0.86;
+      text-shadow: 0 0 2.4px currentColor;
+    }
+
+    .stopwatch-timer-readout.running {
+      color: var(--black);
+      background: var(--green);
+    }
+
+    .stopwatch-hold-exit {
+      position: relative;
+      overflow: hidden;
+      color: var(--green);
+      background: var(--black);
+    }
+
+    .stopwatch-hold-exit.holding {
+      color: var(--black);
+      background: var(--green);
+    }
+
     .display {
       min-height: 238px;
       display: grid;
@@ -1904,6 +2055,7 @@
       <button class="mode-button" type="button" data-mode="multiple">multiple</button>
       <button class="mode-button todo-mode" type="button" data-mode="list">todo</button>
       <button class="mode-button" type="button" data-mode="streak">streak counter</button>
+      <button class="mode-button" type="button" data-mode="stopwatch">stopwatch</button>
     </nav>
 
     <section class="content">
@@ -2101,6 +2253,25 @@
         </div>
 
       </section>
+
+      <section id="stopwatchPanel" class="panel stopwatch-panel" aria-label="Stopwatch">
+        <div class="stopwatch-header">
+          <h1 class="stopwatch-title">stopwatch</h1>
+          <p class="stopwatch-note">pick a saved class, then hand the screen to the kids.</p>
+        </div>
+
+        <div class="stopwatch-setup">
+          <div class="stopwatch-card">
+            <div class="dialog-label">class</div>
+            <div id="stopwatchClassName" class="stopwatch-class-name">no class selected</div>
+            <p id="stopwatchClassNote" class="stopwatch-note">choose a saved class to start.</p>
+          </div>
+          <div class="stopwatch-actions">
+            <button id="chooseStopwatchClass" type="button">choose class</button>
+            <button id="startStopwatchPlay" class="stopwatch-play" type="button">play</button>
+          </div>
+        </div>
+      </section>
     </section>
 
     <footer id="statusbar" class="statusbar" role="status" aria-live="polite">ready</footer>
@@ -2163,6 +2334,43 @@
       <div class="dialog-actions">
         <button id="cancelClassPicker" type="button">cancel</button>
       </div>
+    </div>
+  </dialog>
+
+  <dialog id="stopwatchClassDialog" class="counter-dialog" aria-labelledby="stopwatchClassDialogTitle">
+    <div class="dialog-content">
+      <h2 id="stopwatchClassDialogTitle" class="dialog-title">choose class</h2>
+      <p class="dialog-description">pick the class that will use the stopwatch.</p>
+      <div id="stopwatchClassOptions" class="remove-options" aria-label="Saved classes for stopwatch"></div>
+      <div class="dialog-actions">
+        <button id="cancelStopwatchClass" type="button">cancel</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="stopwatchRosterDialog" class="counter-dialog stopwatch-roster-dialog" aria-labelledby="stopwatchRosterDialogTitle">
+    <div class="dialog-content">
+      <h2 id="stopwatchRosterDialogTitle" class="dialog-title">stopwatch</h2>
+      <p id="stopwatchRosterNote" class="stopwatch-roster-note">pick whose turn it is.</p>
+      <div id="stopwatchRoster" class="stopwatch-roster" aria-live="polite"></div>
+      <button id="stopwatchHoldExit" class="stopwatch-hold-exit" type="button">hold to exit play mode</button>
+    </div>
+  </dialog>
+
+  <dialog id="stopwatchTimerDialog" class="counter-dialog" aria-labelledby="stopwatchTimerDialogTitle">
+    <div class="dialog-content stopwatch-timer">
+      <h2 id="stopwatchTimerDialogTitle" class="dialog-title">ready?</h2>
+      <p id="stopwatchTimerNote" class="dialog-description">tap start when the gymnast is ready.</p>
+      <div id="stopwatchTimerReadout" class="stopwatch-timer-readout" aria-live="polite">0:00.00</div>
+      <div id="stopwatchRunActions" class="stopwatch-timer-actions">
+        <button id="stopwatchStart" class="stopwatch-play" type="button">start</button>
+        <button id="stopwatchStop" class="remove-confirm" type="button" hidden>stop</button>
+      </div>
+      <div id="stopwatchReviewActions" class="stopwatch-timer-actions" hidden>
+        <button id="stopwatchRedo" type="button">redo</button>
+        <button id="stopwatchSubmit" class="stopwatch-play" type="button">submit</button>
+      </div>
+      <button id="stopwatchTimerBack" type="button">back</button>
     </div>
   </dialog>
 
@@ -2329,7 +2537,8 @@
       single: document.getElementById("singlePanel"),
       multiple: document.getElementById("multiplePanel"),
       list: document.getElementById("listPanel"),
-      streak: document.getElementById("streakPanel")
+      streak: document.getElementById("streakPanel"),
+      stopwatch: document.getElementById("stopwatchPanel")
     };
     const multipleLeader = document.getElementById("multipleLeader");
     const showMultipleDailyRecords = document.getElementById("showMultipleDailyRecords");
@@ -2444,6 +2653,29 @@
     const celebration = document.getElementById("celebration");
     const closeCelebration = document.getElementById("closeCelebration");
     const statusbar = document.getElementById("statusbar");
+    const stopwatchClassName = document.getElementById("stopwatchClassName");
+    const stopwatchClassNote = document.getElementById("stopwatchClassNote");
+    const chooseStopwatchClass = document.getElementById("chooseStopwatchClass");
+    const startStopwatchPlay = document.getElementById("startStopwatchPlay");
+    const stopwatchClassDialog = document.getElementById("stopwatchClassDialog");
+    const stopwatchClassOptions = document.getElementById("stopwatchClassOptions");
+    const cancelStopwatchClass = document.getElementById("cancelStopwatchClass");
+    const stopwatchRosterDialog = document.getElementById("stopwatchRosterDialog");
+    const stopwatchRosterDialogTitle = document.getElementById("stopwatchRosterDialogTitle");
+    const stopwatchRosterNote = document.getElementById("stopwatchRosterNote");
+    const stopwatchRoster = document.getElementById("stopwatchRoster");
+    const stopwatchHoldExit = document.getElementById("stopwatchHoldExit");
+    const stopwatchTimerDialog = document.getElementById("stopwatchTimerDialog");
+    const stopwatchTimerDialogTitle = document.getElementById("stopwatchTimerDialogTitle");
+    const stopwatchTimerNote = document.getElementById("stopwatchTimerNote");
+    const stopwatchTimerReadout = document.getElementById("stopwatchTimerReadout");
+    const stopwatchRunActions = document.getElementById("stopwatchRunActions");
+    const stopwatchReviewActions = document.getElementById("stopwatchReviewActions");
+    const stopwatchStart = document.getElementById("stopwatchStart");
+    const stopwatchStop = document.getElementById("stopwatchStop");
+    const stopwatchRedo = document.getElementById("stopwatchRedo");
+    const stopwatchSubmit = document.getElementById("stopwatchSubmit");
+    const stopwatchTimerBack = document.getElementById("stopwatchTimerBack");
 
     let state = {
       mode: "single",
@@ -2455,6 +2687,11 @@
       showMultipleLeader: true,
       classes: [],
       selectedClassId: null,
+      stopwatch: {
+        activeClassId: null,
+        recordDate: "",
+        records: {}
+      },
       lists: [],
       selectedListId: null,
       listSeedVersion: 0
@@ -2475,6 +2712,13 @@
     let isListEditing = false;
     let isMultipleEditing = true;
     let areMultipleScoresHidden = false;
+    let stopwatchPlaying = false;
+    let stopwatchSelectedStudent = "";
+    let stopwatchRunState = "ready";
+    let stopwatchElapsedMs = 0;
+    let stopwatchStartedAt = 0;
+    let stopwatchTimerInterval = null;
+    let stopwatchExitTimer = null;
     let draggedSkillId = null;
     let bratKeyboardState = null;
     let bratKeyboardShifted = false;
@@ -2512,6 +2756,47 @@
       const month = String(date.getMonth() + 1).padStart(2, "0");
       const day = String(date.getDate()).padStart(2, "0");
       return year + "-" + month + "-" + day;
+    }
+
+    function normalizeStopwatchRecords(rawRecords) {
+      const records = {};
+      if (!rawRecords || typeof rawRecords !== "object") return records;
+
+      Object.entries(rawRecords).forEach(([classId, rawClassRecords]) => {
+        if (typeof classId !== "string" || !rawClassRecords || typeof rawClassRecords !== "object") return;
+        const classRecords = {};
+        Object.entries(rawClassRecords).forEach(([name, rawTime]) => {
+          const key = normalizeMultipleName(name);
+          const timeMs = Math.round(Number(rawTime));
+          if (key && Number.isFinite(timeMs) && timeMs > 0 && timeMs <= 3600000) {
+            classRecords[key] = timeMs;
+          }
+        });
+        if (Object.keys(classRecords).length) records[classId] = classRecords;
+      });
+
+      return records;
+    }
+
+    function normalizeStopwatchState(rawStopwatch, classes) {
+      const fallbackClassId = classes[0]?.id || null;
+      const activeClassId = typeof rawStopwatch?.activeClassId === "string" && classes.some((savedClass) => savedClass.id === rawStopwatch.activeClassId)
+        ? rawStopwatch.activeClassId
+        : fallbackClassId;
+
+      return {
+        activeClassId,
+        recordDate: typeof rawStopwatch?.recordDate === "string" ? rawStopwatch.recordDate : "",
+        records: normalizeStopwatchRecords(rawStopwatch?.records)
+      };
+    }
+
+    function ensureStopwatchRecordsCurrent() {
+      const today = getLocalDateKey();
+      if (state.stopwatch.recordDate === today) return false;
+      state.stopwatch.recordDate = today;
+      state.stopwatch.records = {};
+      return true;
     }
 
     function normalizeMultipleDailyRecords(rawRecords) {
@@ -3430,7 +3715,7 @@
         const saved = JSON.parse(savedState || "{}");
 
         if (saved && typeof saved === "object") {
-          state.mode = saved.mode === "list" ? "list" : saved.mode === "streak" ? "streak" : saved.mode === "single" ? "single" : ["multiple", "teams", "individuals"].includes(saved.mode) ? "multiple" : "single";
+          state.mode = saved.mode === "list" ? "list" : saved.mode === "streak" ? "streak" : saved.mode === "stopwatch" ? "stopwatch" : saved.mode === "single" ? "single" : ["multiple", "teams", "individuals"].includes(saved.mode) ? "multiple" : "single";
           state.single = Number.isFinite(Number(saved.single)) ? Number(saved.single) : state.single;
 
           if (Array.isArray(saved.multiple)) {
@@ -3450,6 +3735,7 @@
           state.selectedClassId = state.classes.some((savedClass) => savedClass.id === saved.selectedClassId)
             ? saved.selectedClassId
             : state.classes[0]?.id || null;
+          state.stopwatch = normalizeStopwatchState(saved.stopwatch, state.classes);
 
           state.lists = normalizeLists(saved.lists);
           state.selectedListId = state.lists.some((list) => list.id === saved.selectedListId)
@@ -3469,6 +3755,7 @@
         state.showMultipleLeader = true;
         state.classes = [];
         state.selectedClassId = null;
+        state.stopwatch = normalizeStopwatchState(null, state.classes);
         state.lists = [];
         state.selectedListId = null;
         state.listSeedVersion = 0;
@@ -3479,6 +3766,7 @@
       if (missingDailyRecordDate && dailyRecordsReset) {
         state.multiple.forEach(updateMultipleDailyRecord);
       }
+      ensureStopwatchRecordsCurrent();
 
       if (state.listSeedVersion < DEFAULT_LIST_SEED_VERSION) {
         state.lists = state.lists.filter((list) => list.id !== PREVIOUS_TODO_ID);
@@ -4152,6 +4440,7 @@
       state.classes = state.classes.filter((item) => item.id !== savedClass.id);
       state.selectedClassId = state.classes[0]?.id || null;
       streakCounter.unlinkClass(savedClass.id);
+      unlinkStopwatchClass(savedClass.id);
       saveState();
       renderMultiple();
       statusbar.textContent = savedClass.name + " deleted; current counters were not changed";
@@ -4465,18 +4754,305 @@
       return true;
     }
 
+    function getStopwatchClass() {
+      const activeClass = state.classes.find((savedClass) => savedClass.id === state.stopwatch.activeClassId);
+      if (activeClass) return activeClass;
+      state.stopwatch.activeClassId = state.classes[0]?.id || null;
+      return state.classes[0] || null;
+    }
+
+    function getStopwatchRecords(classId) {
+      if (!state.stopwatch.records[classId]) state.stopwatch.records[classId] = {};
+      return state.stopwatch.records[classId];
+    }
+
+    function formatStopwatchTime(timeMs) {
+      const totalCentiseconds = Math.max(0, Math.round(Number(timeMs) / 10));
+      const minutes = Math.floor(totalCentiseconds / 6000);
+      const seconds = Math.floor(totalCentiseconds / 100) % 60;
+      const centiseconds = totalCentiseconds % 100;
+      return minutes + ":" + String(seconds).padStart(2, "0") + "." + String(centiseconds).padStart(2, "0");
+    }
+
+    function getStopwatchEntries(savedClass) {
+      if (!savedClass) return [];
+      const records = getStopwatchRecords(savedClass.id);
+      const entries = savedClass.students.map((name, index) => ({
+        name,
+        index,
+        timeMs: records[normalizeMultipleName(name)] || null,
+        rank: null
+      }));
+      const timedEntries = entries
+        .filter((entry) => entry.timeMs !== null)
+        .sort((left, right) => left.timeMs - right.timeMs || left.name.localeCompare(right.name));
+      let previousTime = null;
+      let rank = 0;
+      timedEntries.forEach((entry, index) => {
+        if (entry.timeMs !== previousTime) rank = index + 1;
+        entry.rank = rank;
+        previousTime = entry.timeMs;
+      });
+      const unrankedEntries = entries
+        .filter((entry) => entry.timeMs === null)
+        .sort((left, right) => left.name.localeCompare(right.name));
+      return timedEntries.concat(unrankedEntries);
+    }
+
+    function renderStopwatchClassOptions() {
+      stopwatchClassOptions.replaceChildren();
+      if (!state.classes.length) {
+        const empty = document.createElement("p");
+        empty.className = "dialog-description";
+        empty.textContent = "save a class in multiple first.";
+        stopwatchClassOptions.appendChild(empty);
+        return;
+      }
+
+      state.classes.forEach((savedClass) => {
+        const option = document.createElement("button");
+        const selected = savedClass.id === state.stopwatch.activeClassId;
+        option.type = "button";
+        option.className = "class-picker-option";
+        option.textContent = savedClass.name + " — " + savedClass.students.length + " kids";
+        option.setAttribute("aria-pressed", String(selected));
+        option.addEventListener("click", () => {
+          state.stopwatch.activeClassId = savedClass.id;
+          saveState();
+          renderStopwatch();
+          closeCounterDialog(stopwatchClassDialog);
+          statusbar.textContent = savedClass.name + " selected for stopwatch";
+        });
+        stopwatchClassOptions.appendChild(option);
+      });
+    }
+
+    function renderStopwatchRoster() {
+      const savedClass = getStopwatchClass();
+      stopwatchRoster.replaceChildren();
+      stopwatchRosterDialogTitle.textContent = savedClass?.name || "stopwatch";
+      stopwatchRosterNote.textContent = savedClass
+        ? "pick whose turn it is. fastest times are first."
+        : "choose a saved class before starting play mode.";
+
+      if (!savedClass?.students.length) {
+        const empty = document.createElement("p");
+        empty.className = "dialog-description";
+        empty.textContent = savedClass ? "this class has no names yet." : "no saved class selected.";
+        stopwatchRoster.appendChild(empty);
+        return;
+      }
+
+      getStopwatchEntries(savedClass).forEach((entry) => {
+        const row = document.createElement("button");
+        const name = document.createElement("span");
+        const rank = document.createElement("span");
+        const record = document.createElement("span");
+        row.type = "button";
+        row.className = "stopwatch-roster-row";
+        name.className = "stopwatch-student-name";
+        rank.className = "stopwatch-rank";
+        record.className = "stopwatch-record" + (entry.timeMs === null ? " empty" : "");
+        name.textContent = entry.name;
+        rank.textContent = entry.rank ? "#" + entry.rank : "--";
+        record.textContent = entry.timeMs === null ? "no time" : formatStopwatchTime(entry.timeMs);
+        row.setAttribute("aria-label", entry.name + (entry.timeMs === null ? ", no time yet" : ", rank " + entry.rank + ", " + formatStopwatchTime(entry.timeMs)));
+        row.append(name, rank, record);
+        row.addEventListener("click", () => openStopwatchTimer(entry.name));
+        stopwatchRoster.appendChild(row);
+      });
+    }
+
+    function getStopwatchElapsedMs() {
+      return stopwatchRunState === "running"
+        ? Math.max(0, performance.now() - stopwatchStartedAt)
+        : stopwatchElapsedMs;
+    }
+
+    function clearStopwatchTimer() {
+      window.clearInterval(stopwatchTimerInterval);
+      stopwatchTimerInterval = null;
+    }
+
+    function renderStopwatchTimer() {
+      const isRunning = stopwatchRunState === "running";
+      const isReviewing = stopwatchRunState === "stopped";
+      const elapsed = getStopwatchElapsedMs();
+      stopwatchTimerDialogTitle.textContent = stopwatchSelectedStudent || "ready?";
+      stopwatchTimerNote.textContent = isRunning
+        ? "timing " + stopwatchSelectedStudent + "."
+        : isReviewing
+          ? "keep this time or redo it."
+          : "tap start when the gymnast is ready.";
+      stopwatchTimerReadout.textContent = formatStopwatchTime(elapsed);
+      stopwatchTimerReadout.classList.toggle("running", isRunning);
+      stopwatchRunActions.hidden = isReviewing;
+      stopwatchReviewActions.hidden = !isReviewing;
+      stopwatchStart.hidden = isRunning || isReviewing;
+      stopwatchStop.hidden = !isRunning;
+      stopwatchTimerBack.disabled = isRunning;
+    }
+
+    function renderStopwatch() {
+      const didResetRecords = ensureStopwatchRecordsCurrent();
+      const savedClass = getStopwatchClass();
+      stopwatchClassName.textContent = savedClass?.name || "no class selected";
+      stopwatchClassNote.textContent = savedClass?.students.length
+        ? savedClass.students.length + " kids ready for timed forward rolls."
+        : savedClass
+          ? "add names to this class in multiple before using play mode."
+          : "save a class in multiple, then choose it here.";
+      startStopwatchPlay.disabled = !savedClass?.students.length;
+      if (didResetRecords) saveState();
+      if (stopwatchRosterDialog.open) renderStopwatchRoster();
+      if (stopwatchTimerDialog.open) renderStopwatchTimer();
+    }
+
+    function openStopwatchClassDialog() {
+      renderStopwatchClassOptions();
+      openCounterDialog(stopwatchClassDialog);
+    }
+
+    function openStopwatchRoster() {
+      const savedClass = getStopwatchClass();
+      if (!savedClass?.students.length) {
+        statusbar.textContent = savedClass ? "add names to this class first" : "choose a saved class first";
+        return;
+      }
+      stopwatchPlaying = true;
+      renderStopwatchRoster();
+      openCounterDialog(stopwatchRosterDialog);
+      window.requestAnimationFrame(() => stopwatchRoster.querySelector("button")?.focus());
+      statusbar.textContent = savedClass.name + " stopwatch play mode ready";
+    }
+
+    function openStopwatchTimer(studentName) {
+      if (!stopwatchPlaying || !studentName) return;
+      stopwatchSelectedStudent = studentName;
+      stopwatchRunState = "ready";
+      stopwatchElapsedMs = 0;
+      clearStopwatchTimer();
+      closeCounterDialog(stopwatchRosterDialog);
+      renderStopwatchTimer();
+      openCounterDialog(stopwatchTimerDialog);
+      window.requestAnimationFrame(() => stopwatchStart.focus());
+      playSound("plus");
+    }
+
+    function startStopwatchTimer() {
+      if (!stopwatchSelectedStudent || stopwatchRunState !== "ready") return;
+      stopwatchRunState = "running";
+      stopwatchStartedAt = performance.now();
+      stopwatchElapsedMs = 0;
+      clearStopwatchTimer();
+      stopwatchTimerInterval = window.setInterval(renderStopwatchTimer, 40);
+      renderStopwatchTimer();
+      playSound("plus");
+      statusbar.textContent = "timing " + stopwatchSelectedStudent;
+    }
+
+    function stopStopwatchTimer() {
+      if (stopwatchRunState !== "running") return;
+      stopwatchElapsedMs = getStopwatchElapsedMs();
+      clearStopwatchTimer();
+      stopwatchRunState = "stopped";
+      renderStopwatchTimer();
+      playSound("goal");
+      statusbar.textContent = formatStopwatchTime(stopwatchElapsedMs) + " ready to submit or redo";
+    }
+
+    function redoStopwatchTimer() {
+      if (stopwatchRunState !== "stopped") return;
+      stopwatchRunState = "ready";
+      stopwatchElapsedMs = 0;
+      renderStopwatchTimer();
+      playSound("clear");
+      statusbar.textContent = "ready to redo " + stopwatchSelectedStudent;
+    }
+
+    function submitStopwatchTime() {
+      const savedClass = getStopwatchClass();
+      const elapsed = Math.max(1, Math.round(stopwatchElapsedMs));
+      if (!savedClass || !stopwatchSelectedStudent || stopwatchRunState !== "stopped") return;
+
+      ensureStopwatchRecordsCurrent();
+      const records = getStopwatchRecords(savedClass.id);
+      const key = normalizeMultipleName(stopwatchSelectedStudent);
+      const previous = records[key];
+      const isNewRecord = !previous || elapsed < previous;
+      if (isNewRecord) records[key] = elapsed;
+      saveState();
+      playSound(isNewRecord ? "todo" : "plus");
+      statusbar.textContent = isNewRecord
+        ? stopwatchSelectedStudent + " new best: " + formatStopwatchTime(elapsed)
+        : stopwatchSelectedStudent + " submitted " + formatStopwatchTime(elapsed);
+      stopwatchSelectedStudent = "";
+      stopwatchRunState = "ready";
+      stopwatchElapsedMs = 0;
+      closeCounterDialog(stopwatchTimerDialog);
+      openStopwatchRoster();
+    }
+
+    function returnToStopwatchRoster() {
+      if (stopwatchRunState === "running") return;
+      stopwatchSelectedStudent = "";
+      stopwatchRunState = "ready";
+      stopwatchElapsedMs = 0;
+      clearStopwatchTimer();
+      closeCounterDialog(stopwatchTimerDialog);
+      openStopwatchRoster();
+      statusbar.textContent = "pick the next gymnast";
+    }
+
+    function cancelStopwatchExitHold() {
+      window.clearTimeout(stopwatchExitTimer);
+      stopwatchExitTimer = null;
+      stopwatchHoldExit.classList.remove("holding");
+      stopwatchHoldExit.textContent = "hold to exit play mode";
+    }
+
+    function exitStopwatchPlay() {
+      cancelStopwatchExitHold();
+      stopwatchPlaying = false;
+      stopwatchSelectedStudent = "";
+      stopwatchRunState = "ready";
+      stopwatchElapsedMs = 0;
+      clearStopwatchTimer();
+      closeCounterDialog(stopwatchTimerDialog);
+      closeCounterDialog(stopwatchRosterDialog);
+      renderStopwatch();
+      statusbar.textContent = "stopwatch setup ready";
+    }
+
+    function beginStopwatchExitHold() {
+      if (!stopwatchPlaying || stopwatchExitTimer) return;
+      stopwatchHoldExit.classList.add("holding");
+      stopwatchHoldExit.textContent = "keep holding...";
+      stopwatchExitTimer = window.setTimeout(exitStopwatchPlay, 1200);
+    }
+
+    function unlinkStopwatchClass(classId) {
+      delete state.stopwatch.records[classId];
+      if (state.stopwatch.activeClassId === classId) {
+        state.stopwatch.activeClassId = state.classes[0]?.id || null;
+      }
+      if (!getStopwatchClass()) exitStopwatchPlay();
+    }
+
     function render() {
       renderMode();
       renderSingle();
       renderMultiple();
       renderList();
       streakCounter.render();
+      renderStopwatch();
       saveState();
     }
 
     function setMode(mode) {
       if (bratKeyboardState) finishBratKeyboard(bratKeyboardState.isFormField ? "hide" : "cancel");
       cancelCounterClear(false);
+      if (stopwatchPlaying && mode !== "stopwatch") exitStopwatchPlay();
       state.mode = mode;
       isMultipleEditing = mode === "multiple";
       if (mode === "streak") streakCounter.setEditing(true);
@@ -4486,8 +5062,10 @@
         ? (isMultipleEditing ? "editing multiple counters" : "multiple points")
         : mode === "list"
           ? "TODOs"
-          : mode === "streak"
+        : mode === "streak"
             ? "editing streak students"
+            : mode === "stopwatch"
+              ? "stopwatch setup ready"
             : "single points";
     }
 
@@ -5041,6 +5619,31 @@
     todoUndoButton.addEventListener("click", undoTodoChange);
     todoRedoButton.addEventListener("click", redoTodoChange);
     closeCelebration.addEventListener("click", hideTodoCelebration);
+    chooseStopwatchClass.addEventListener("click", openStopwatchClassDialog);
+    startStopwatchPlay.addEventListener("click", openStopwatchRoster);
+    cancelStopwatchClass.addEventListener("click", () => closeCounterDialog(stopwatchClassDialog));
+    stopwatchStart.addEventListener("click", startStopwatchTimer);
+    stopwatchStop.addEventListener("click", stopStopwatchTimer);
+    stopwatchRedo.addEventListener("click", redoStopwatchTimer);
+    stopwatchSubmit.addEventListener("click", submitStopwatchTime);
+    stopwatchTimerBack.addEventListener("click", returnToStopwatchRoster);
+    stopwatchHoldExit.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      stopwatchHoldExit.setPointerCapture?.(event.pointerId);
+      beginStopwatchExitHold();
+    });
+    ["pointerup", "pointercancel", "pointerleave", "lostpointercapture"].forEach((eventName) => {
+      stopwatchHoldExit.addEventListener(eventName, cancelStopwatchExitHold);
+    });
+    stopwatchHoldExit.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      if (!event.repeat) beginStopwatchExitHold();
+    });
+    stopwatchHoldExit.addEventListener("keyup", (event) => {
+      if (event.key === "Enter" || event.key === " ") cancelStopwatchExitHold();
+    });
+    stopwatchHoldExit.addEventListener("click", (event) => event.preventDefault());
 
     addCounterForm.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -5099,7 +5702,7 @@
     });
     cancelEditSkill.addEventListener("click", () => closeCounterDialog(editSkillDialog));
 
-    [addDialog, removeDialog, classDialog, classPickerDialog, resetDialog, newListDialog, renameListDialog, deleteListDialog, addSkillDialog, editSkillDialog].forEach((dialog) => {
+    [addDialog, removeDialog, classDialog, classPickerDialog, stopwatchClassDialog, stopwatchRosterDialog, stopwatchTimerDialog, resetDialog, newListDialog, renameListDialog, deleteListDialog, addSkillDialog, editSkillDialog].forEach((dialog) => {
       dialog.addEventListener("close", () => {
         if (bratKeyboardHost === dialog) finishBratKeyboard("cleanup");
         restoreDialogFocus(dialog);
@@ -5107,6 +5710,19 @@
     });
     classPickerDialog.addEventListener("close", () => {
       classSelector.setAttribute("aria-expanded", "false");
+    });
+    stopwatchRosterDialog.addEventListener("cancel", (event) => {
+      if (!stopwatchPlaying) return;
+      event.preventDefault();
+      statusbar.textContent = "hold exit to leave stopwatch play mode";
+    });
+    stopwatchTimerDialog.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      if (stopwatchRunState === "running") {
+        statusbar.textContent = "stop the timer before going back";
+        return;
+      }
+      returnToStopwatchRoster();
     });
     resetDialog.addEventListener("close", () => {
       pendingResetKind = null;
