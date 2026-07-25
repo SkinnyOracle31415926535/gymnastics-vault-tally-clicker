@@ -1340,6 +1340,8 @@
     #listPanel.is-viewing .todo-practice-footer {
       order: 6;
       display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
     }
 
     #listPanel.is-viewing .todo-practice-footer button {
@@ -2533,6 +2535,7 @@
           <button id="resetTodo" class="todo-reset" type="button">reset all</button>
         </div>
         <div id="todoPracticeFooter" class="todo-practice-footer" hidden>
+          <button id="todoPracticeUndo" type="button" disabled>undo</button>
           <button id="exitTodoView" type="button">exit view</button>
         </div>
       </section>
@@ -2998,6 +3001,7 @@
     const todoRedoButton = document.getElementById("todoRedoButton");
     const listViewButton = document.getElementById("listViewButton");
     const todoPracticeFooter = document.getElementById("todoPracticeFooter");
+    const todoPracticeUndo = document.getElementById("todoPracticeUndo");
     const exitTodoView = document.getElementById("exitTodoView");
     const listPanel = document.getElementById("listPanel");
     const listTableHead = document.getElementById("listTableHead");
@@ -4236,15 +4240,22 @@
     }
 
     function renderTodoHistoryControls() {
-      todoUndoButton.disabled = todoUndoStack.length === 0;
+      const canUndo = todoUndoStack.length > 0;
+      const undoTitle = canUndo ? "undo last TODO change" : "nothing to undo";
+      const undoLabel = isTodoActionConfirmationArmed("undo") ? "tap undo again" : "undo";
+      todoUndoButton.disabled = !canUndo;
       todoRedoButton.disabled = todoRedoStack.length === 0;
-      todoUndoButton.title = todoUndoStack.length ? "undo last TODO change" : "nothing to undo";
+      todoPracticeUndo.disabled = !canUndo;
+      todoUndoButton.title = undoTitle;
+      todoPracticeUndo.title = undoTitle;
       todoRedoButton.title = todoRedoStack.length ? "redo last TODO change" : "nothing to redo";
-      todoUndoButton.textContent = isTodoActionConfirmationArmed("undo") ? "tap undo again" : "undo";
+      todoUndoButton.textContent = undoLabel;
+      todoPracticeUndo.textContent = undoLabel;
       todoRedoButton.textContent = isTodoActionConfirmationArmed("redo") ? "tap redo again" : "redo";
     }
 
-    function restoreTodoHistory(snapshot, message) {
+    function restoreTodoHistory(snapshot, message, preserveView = false) {
+      const keepViewing = preserveView && state.mode === "list" && isListViewing;
       clearTodoActionConfirmation();
       state.lists = normalizeLists(snapshot.lists);
       state.selectedListId = state.lists.some((list) => list.id === snapshot.selectedListId)
@@ -4252,19 +4263,19 @@
         : state.lists[0]?.id || null;
       state.listSeedVersion = snapshot.listSeedVersion || 0;
       isListEditing = false;
-      isListViewing = false;
+      isListViewing = keepViewing;
       hideTodoCelebration();
       saveState();
       renderList();
       statusbar.textContent = message;
     }
 
-    function undoTodoChange() {
+    function undoTodoChange(preserveView = false) {
       clearTodoActionConfirmation();
       const previous = todoUndoStack.pop();
       if (!previous) return;
       todoRedoStack.push(cloneTodoState());
-      restoreTodoHistory(previous, "undid TODO change");
+      restoreTodoHistory(previous, "undid TODO change", preserveView);
     }
 
     function redoTodoChange() {
@@ -6289,6 +6300,9 @@
     });
     todoUndoButton.addEventListener("click", () => {
       if (!todoUndoButton.disabled) armOrConfirmTodoAction("undo", "undo", undoTodoChange);
+    });
+    todoPracticeUndo.addEventListener("click", () => {
+      if (!todoPracticeUndo.disabled) armOrConfirmTodoAction("undo", "undo", () => undoTodoChange(true));
     });
     todoRedoButton.addEventListener("click", () => {
       if (!todoRedoButton.disabled) armOrConfirmTodoAction("redo", "redo", redoTodoChange);
