@@ -273,17 +273,12 @@
       gap: 10px;
     }
 
-    .stopwatch-history-actions {
-      display: grid;
-    }
-
     .stopwatch-timer-actions[hidden] {
       display: none;
     }
 
     .stopwatch-actions button,
     .stopwatch-timer-actions button,
-    .stopwatch-history-actions button,
     .stopwatch-play-undo,
     .stopwatch-hold-exit {
       min-height: 62px;
@@ -2293,9 +2288,6 @@
             <button id="resetStopwatchTimes" class="remove-action stopwatch-reset-times" type="button" disabled>reset times</button>
           </div>
         </div>
-        <div class="stopwatch-history-actions" aria-label="Stopwatch history">
-          <button id="stopwatchUndoButton" type="button" disabled>undo</button>
-        </div>
       </section>
     </section>
 
@@ -2684,7 +2676,6 @@
     const chooseStopwatchClass = document.getElementById("chooseStopwatchClass");
     const startStopwatchPlay = document.getElementById("startStopwatchPlay");
     const resetStopwatchTimes = document.getElementById("resetStopwatchTimes");
-    const stopwatchUndoButton = document.getElementById("stopwatchUndoButton");
     const stopwatchClassDialog = document.getElementById("stopwatchClassDialog");
     const stopwatchClassOptions = document.getElementById("stopwatchClassOptions");
     const cancelStopwatchClass = document.getElementById("cancelStopwatchClass");
@@ -2749,6 +2740,8 @@
     let stopwatchStartedAt = 0;
     let stopwatchTimerInterval = null;
     let stopwatchExitTimer = null;
+    let stopwatchReviewConfirmationAction = null;
+    let stopwatchReviewConfirmationTimer = null;
     let draggedSkillId = null;
     let bratKeyboardState = null;
     let bratKeyboardShifted = false;
@@ -4807,10 +4800,8 @@
 
     function renderStopwatchHistoryControls() {
       const hasUndo = stopwatchUndoStack.length > 0;
-      [stopwatchUndoButton, stopwatchPlayUndo].forEach((button) => {
-        button.disabled = !hasUndo;
-        button.title = hasUndo ? "undo last stopwatch change" : "nothing to undo";
-      });
+      stopwatchPlayUndo.disabled = !hasUndo;
+      stopwatchPlayUndo.title = hasUndo ? "undo last stopwatch change" : "nothing to undo";
     }
 
     function undoStopwatchChange() {
@@ -4821,7 +4812,7 @@
       renderStopwatch();
       playSound("clear");
       statusbar.textContent = "undid last stopwatch change";
-      if (stopwatchUndoButton.disabled) {
+      if (stopwatchPlayUndo.disabled) {
         window.requestAnimationFrame(() => {
           if (stopwatchRosterDialog.open) {
             stopwatchRoster.querySelector("button")?.focus();
@@ -4940,6 +4931,34 @@
       stopwatchTimerInterval = null;
     }
 
+    function clearStopwatchReviewConfirmation() {
+      window.clearTimeout(stopwatchReviewConfirmationTimer);
+      stopwatchReviewConfirmationTimer = null;
+      stopwatchReviewConfirmationAction = null;
+    }
+
+    function armOrConfirmStopwatchReviewAction(action) {
+      if (stopwatchRunState !== "stopped") return;
+      if (stopwatchReviewConfirmationAction === action) {
+        clearStopwatchReviewConfirmation();
+        if (action === "redo") redoStopwatchTimer();
+        if (action === "submit") submitStopwatchTime();
+        return;
+      }
+
+      window.clearTimeout(stopwatchReviewConfirmationTimer);
+      stopwatchReviewConfirmationAction = action;
+      renderStopwatchTimer();
+      statusbar.textContent = "tap " + action + " again to confirm";
+      stopwatchReviewConfirmationTimer = window.setTimeout(() => {
+        if (stopwatchReviewConfirmationAction !== action) return;
+        stopwatchReviewConfirmationTimer = null;
+        stopwatchReviewConfirmationAction = null;
+        renderStopwatchTimer();
+        statusbar.textContent = action + " confirmation canceled";
+      }, 3000);
+    }
+
     function renderStopwatchTimer() {
       const isRunning = stopwatchRunState === "running";
       const isReviewing = stopwatchRunState === "stopped";
@@ -4957,6 +4976,8 @@
       stopwatchStart.hidden = isRunning || isReviewing;
       stopwatchStop.hidden = !isRunning;
       stopwatchTimerBack.disabled = isRunning;
+      stopwatchRedo.textContent = stopwatchReviewConfirmationAction === "redo" ? "tap redo again" : "redo";
+      stopwatchSubmit.textContent = stopwatchReviewConfirmationAction === "submit" ? "tap submit again" : "submit";
     }
 
     function renderStopwatch() {
@@ -4998,6 +5019,7 @@
 
     function openStopwatchTimer(studentName) {
       if (!stopwatchPlaying || !studentName) return;
+      clearStopwatchReviewConfirmation();
       stopwatchSelectedStudent = studentName;
       stopwatchRunState = "ready";
       stopwatchElapsedMs = 0;
@@ -5011,6 +5033,7 @@
 
     function startStopwatchTimer() {
       if (!stopwatchSelectedStudent || stopwatchRunState !== "ready") return;
+      clearStopwatchReviewConfirmation();
       stopwatchRunState = "running";
       stopwatchStartedAt = performance.now();
       stopwatchElapsedMs = 0;
@@ -5023,6 +5046,7 @@
 
     function stopStopwatchTimer() {
       if (stopwatchRunState !== "running") return;
+      clearStopwatchReviewConfirmation();
       stopwatchElapsedMs = getStopwatchElapsedMs();
       clearStopwatchTimer();
       stopwatchRunState = "stopped";
@@ -5033,6 +5057,7 @@
 
     function redoStopwatchTimer() {
       if (stopwatchRunState !== "stopped") return;
+      clearStopwatchReviewConfirmation();
       stopwatchRunState = "ready";
       stopwatchElapsedMs = 0;
       renderStopwatchTimer();
@@ -5045,6 +5070,7 @@
       const elapsed = Math.max(1, Math.round(stopwatchElapsedMs));
       if (!savedClass || !stopwatchSelectedStudent || stopwatchRunState !== "stopped") return;
 
+      clearStopwatchReviewConfirmation();
       ensureStopwatchRecordsCurrent();
       const records = getStopwatchRecords(savedClass.id);
       const key = normalizeMultipleName(stopwatchSelectedStudent);
@@ -5069,6 +5095,7 @@
 
     function returnToStopwatchRoster() {
       if (stopwatchRunState === "running") return;
+      clearStopwatchReviewConfirmation();
       stopwatchSelectedStudent = "";
       stopwatchRunState = "ready";
       stopwatchElapsedMs = 0;
@@ -5087,6 +5114,7 @@
 
     function exitStopwatchPlay() {
       cancelStopwatchExitHold();
+      clearStopwatchReviewConfirmation();
       stopwatchPlaying = false;
       stopwatchSelectedStudent = "";
       stopwatchRunState = "ready";
@@ -5719,13 +5747,12 @@
     chooseStopwatchClass.addEventListener("click", openStopwatchClassDialog);
     startStopwatchPlay.addEventListener("click", openStopwatchRoster);
     resetStopwatchTimes.addEventListener("click", () => openResetDialog("stopwatch"));
-    stopwatchUndoButton.addEventListener("click", undoStopwatchChange);
     stopwatchPlayUndo.addEventListener("click", undoStopwatchChange);
     cancelStopwatchClass.addEventListener("click", () => closeCounterDialog(stopwatchClassDialog));
     stopwatchStart.addEventListener("click", startStopwatchTimer);
     stopwatchStop.addEventListener("click", stopStopwatchTimer);
-    stopwatchRedo.addEventListener("click", redoStopwatchTimer);
-    stopwatchSubmit.addEventListener("click", submitStopwatchTime);
+    stopwatchRedo.addEventListener("click", () => armOrConfirmStopwatchReviewAction("redo"));
+    stopwatchSubmit.addEventListener("click", () => armOrConfirmStopwatchReviewAction("submit"));
     stopwatchTimerBack.addEventListener("click", returnToStopwatchRoster);
     stopwatchHoldExit.addEventListener("pointerdown", (event) => {
       event.preventDefault();
