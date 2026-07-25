@@ -518,6 +518,11 @@
       gap: 14px;
     }
 
+    .single-controls .clear,
+    .single-scores-button {
+      grid-column: 1 / -1;
+    }
+
     .plus,
     .minus {
       min-height: 118px;
@@ -901,7 +906,7 @@
 
     #streakPanel.practice-view .streak-practice-footer {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 6px;
     }
 
@@ -1418,7 +1423,7 @@
     #listPanel.is-viewing .todo-practice-footer {
       order: 6;
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 8px;
     }
 
@@ -2313,6 +2318,20 @@
         grid-column: 1 / -1;
       }
 
+      #listPanel.is-viewing .todo-practice-footer,
+      #streakPanel.practice-view .streak-practice-footer {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      #listPanel.is-viewing .todo-practice-footer .hold-to-exit,
+      #streakPanel.practice-view .streak-practice-footer .hold-to-exit {
+        grid-column: 1 / -1;
+      }
+
+      #streakPanel.practice-view #streakPracticeResetScores {
+        grid-column: 1 / -1;
+      }
+
       body.todo-practice-view .window {
         height: calc(100dvh - 12px);
       }
@@ -2515,10 +2534,11 @@
     <section class="content">
       <section id="singlePanel" class="panel active" aria-label="Single point counter">
         <div id="countDisplay" class="display" aria-live="polite">0</div>
-        <div class="controls">
+        <div class="controls single-controls">
           <button id="plusButton" class="plus" type="button" aria-label="Add one point">+</button>
           <button id="minusButton" class="minus" type="button" aria-label="Subtract one point">-</button>
           <button id="clearButton" class="clear" type="button">clear</button>
+          <button id="singleScoresButton" class="single-scores-button" type="button" aria-pressed="false">hide scores</button>
         </div>
       </section>
 
@@ -2618,6 +2638,7 @@
         </div>
         <div id="todoPracticeFooter" class="todo-practice-footer" hidden>
           <button id="todoPracticeUndo" type="button" disabled>undo</button>
+          <button id="todoScoresButton" type="button" aria-pressed="false">hide scores</button>
           <button id="exitTodoView" class="hold-to-exit" type="button">hold to exit view</button>
         </div>
       </section>
@@ -2707,6 +2728,7 @@
 
         <div id="streakPracticeFooter" class="streak-practice-footer" hidden>
           <button id="streakPracticeUndo" type="button" disabled>undo</button>
+          <button id="streakPracticePointsButton" type="button" aria-pressed="false">hide points</button>
           <button id="streakPracticeResetScores" type="button">reset scores</button>
           <button id="streakPracticeExit" class="hold-to-exit" type="button">hold to exit view</button>
         </div>
@@ -2719,8 +2741,6 @@
           <p class="stopwatch-note">choose or create a saved class, then hand the screen to the kids.</p>
         </div>
 
-        <div id="stopwatchClassSlot" class="class-roster-slot"></div>
-
         <div class="stopwatch-setup">
           <div class="stopwatch-card">
             <div class="dialog-label">active class</div>
@@ -2732,6 +2752,8 @@
             <button id="resetStopwatchTimes" class="remove-action stopwatch-reset-times" type="button" disabled>reset times</button>
           </div>
         </div>
+
+        <div id="stopwatchClassSlot" class="class-roster-slot"></div>
       </section>
     </section>
 
@@ -2991,6 +3013,7 @@
     const plusButton = document.getElementById("plusButton");
     const minusButton = document.getElementById("minusButton");
     const clearButton = document.getElementById("clearButton");
+    const singleScoresButton = document.getElementById("singleScoresButton");
     const menuToggle = document.getElementById("menuToggle");
     const modeMenu = document.getElementById("modeMenu");
     const modeButtons = Array.from(document.querySelectorAll(".mode-button"));
@@ -3083,6 +3106,7 @@
     const listViewButton = document.getElementById("listViewButton");
     const todoPracticeFooter = document.getElementById("todoPracticeFooter");
     const todoPracticeUndo = document.getElementById("todoPracticeUndo");
+    const todoScoresButton = document.getElementById("todoScoresButton");
     const exitTodoView = document.getElementById("exitTodoView");
     const listPanel = document.getElementById("listPanel");
     const listTableHead = document.getElementById("listTableHead");
@@ -3182,7 +3206,9 @@
     let isListEditing = false;
     let isListViewing = false;
     let isMultipleEditing = true;
+    let areSingleScoresHidden = false;
     let areMultipleScoresHidden = false;
+    let areTodoScoresHidden = false;
     let stopwatchPlaying = false;
     let stopwatchSelectedStudent = "";
     let stopwatchRunState = "ready";
@@ -4587,11 +4613,14 @@
     }
 
     function renderSingle() {
-      countDisplay.textContent = state.single;
+      countDisplay.textContent = areSingleScoresHidden ? "?" : state.single;
+      countDisplay.setAttribute("aria-label", areSingleScoresHidden ? "single score hidden" : state.single + " points");
       clearButton.textContent = singleClearArmed ? "tap clear again" : "clear";
       clearButton.classList.toggle("armed", singleClearArmed);
       clearButton.setAttribute("aria-pressed", String(singleClearArmed));
       clearButton.setAttribute("aria-label", singleClearArmed ? "Tap clear again to reset the counter" : "Clear the counter");
+      singleScoresButton.textContent = areSingleScoresHidden ? "reveal scores" : "hide scores";
+      singleScoresButton.setAttribute("aria-pressed", String(areSingleScoresHidden));
     }
 
     function getCounterCard(id) {
@@ -5152,6 +5181,7 @@
         draggedSkillId = null;
       }
       const isPracticeView = state.mode === "list" && isListViewing;
+      const shouldHideTodoScores = isPracticeView && areTodoScoresHidden;
       if (!isPracticeView) cancelTodoViewExitHold();
       listPanel.classList.toggle("is-editing", isListEditing);
       listPanel.classList.toggle("is-viewing", isPracticeView);
@@ -5163,6 +5193,8 @@
       listViewButton.classList.toggle("is-active", isPracticeView);
       listViewButton.setAttribute("aria-pressed", String(isPracticeView));
       todoPracticeFooter.hidden = !isPracticeView;
+      todoScoresButton.textContent = areTodoScoresHidden ? "reveal scores" : "hide scores";
+      todoScoresButton.setAttribute("aria-pressed", String(areTodoScoresHidden));
 
       listSelector.innerHTML = "";
       if (!state.lists.length) {
@@ -5216,7 +5248,20 @@
         listCurrentTarget.textContent = "/" + currentSkill.reps;
       }
 
-      listProgressFill.style.width = stats.percentage + "%";
+      if (shouldHideTodoScores) {
+        listProgressText.textContent = "scores hidden";
+        listProgressText.setAttribute("aria-label", "scores hidden");
+        listCurrentCount.textContent = "?";
+        listCurrentCount.setAttribute("aria-label", "score hidden");
+        listCurrentTarget.textContent = "";
+        listCurrentTarget.setAttribute("aria-hidden", "true");
+      } else {
+        listProgressText.removeAttribute("aria-label");
+        listCurrentCount.removeAttribute("aria-label");
+        listCurrentTarget.removeAttribute("aria-hidden");
+      }
+
+      listProgressFill.style.width = shouldHideTodoScores ? "0%" : stats.percentage + "%";
       listSuccess.classList.toggle("active", isComplete);
       listSuccess.textContent = hasList ? list.name + " TODO complete! great work." : "TODO complete! great work.";
       renderTodoHistoryControls();
@@ -5267,7 +5312,7 @@
 
         const reps = document.createElement("td");
         reps.className = "skill-progress";
-        reps.textContent = skill.completed + " / " + skill.reps;
+        reps.textContent = shouldHideTodoScores ? "? / ?" : skill.completed + " / " + skill.reps;
         if (!isPracticeView) {
           reps.classList.add("skill-editable");
           reps.tabIndex = 0;
@@ -5638,8 +5683,8 @@
       stopwatchClassNote.textContent = savedClass?.students.length
         ? savedClass.students.length + " kids ready for timed forward rolls."
         : savedClass
-          ? "add names to this saved class above."
-          : "choose or create a saved class above.";
+          ? "add names to this saved class below."
+          : "choose or create a saved class below.";
       startStopwatchPlay.disabled = !savedClass?.students.length;
       resetStopwatchTimes.disabled = !hasSavedTimes;
       renderStopwatchHistoryControls();
@@ -6393,6 +6438,11 @@
     minusButton.addEventListener("click", () => changeSingle(-1, "minus"));
 
     clearButton.addEventListener("click", armOrConfirmSingleClear);
+    singleScoresButton.addEventListener("click", () => {
+      areSingleScoresHidden = !areSingleScoresHidden;
+      renderSingle();
+      statusbar.textContent = areSingleScoresHidden ? "single score hidden" : "single score revealed";
+    });
     resetMultiple.addEventListener("click", () => openResetDialog("multiple"));
     multipleViewButton.addEventListener("click", () => setMultipleEditing(false));
     multipleScoresButton.addEventListener("click", () => {
@@ -6436,6 +6486,11 @@
     addSkill.addEventListener("click", openAddSkillDialog);
     editTodo.addEventListener("click", () => setListEditing(!isListEditing));
     listViewButton.addEventListener("click", () => setListViewing(true));
+    todoScoresButton.addEventListener("click", () => {
+      areTodoScoresHidden = !areTodoScoresHidden;
+      renderList();
+      statusbar.textContent = areTodoScoresHidden ? "TODO scores hidden" : "TODO scores revealed";
+    });
     exitTodoView.addEventListener("pointerdown", (event) => {
       event.preventDefault();
       exitTodoView.setPointerCapture?.(event.pointerId);
@@ -6621,6 +6676,7 @@
       const redoButton = document.getElementById("streakRedoButton");
       const practiceFooter = document.getElementById("streakPracticeFooter");
       const practiceUndoButton = document.getElementById("streakPracticeUndo");
+      const practicePointsButton = document.getElementById("streakPracticePointsButton");
       const practiceResetScoresButton = document.getElementById("streakPracticeResetScores");
       const practiceExitButton = document.getElementById("streakPracticeExit");
       const soundToggle = document.getElementById("streakSoundToggle");
@@ -6647,6 +6703,7 @@
       let streakActionConfirmationKey = null;
       let streakActionConfirmationTimer = null;
       let practiceExitTimer = null;
+      let areStreakPointsHidden = false;
       let undoStack = [];
       let redoStack = [];
       let isStreakEditing = true;
@@ -7000,6 +7057,8 @@
         panel.classList.toggle("practice-view", isPracticeView);
         document.body.classList.toggle("streak-practice-view", isPracticeView);
         practiceFooter.hidden = !isPracticeView;
+        practicePointsButton.textContent = areStreakPointsHidden ? "reveal points" : "hide points";
+        practicePointsButton.setAttribute("aria-pressed", String(areStreakPointsHidden));
       }
 
       function setStreakEditing(editing) {
@@ -7137,11 +7196,11 @@
 
           if (isPracticeView) {
             row.classList.add("streak-practice-row");
-            row.setAttribute("aria-label", student.name + ": streak " + student.streak + "/" + student.target + ", " + student.points + " points");
+            row.setAttribute("aria-label", student.name + ": streak " + student.streak + "/" + student.target + ", " + (areStreakPointsHidden ? "points hidden" : student.points + " points"));
             row.append(
               nameCell,
               makePracticeReadout("streak", student.streak + "/" + student.target),
-              makePracticeReadout("points", student.points),
+              makePracticeReadout("points", areStreakPointsHidden ? "?" : student.points),
               makeStudentActions(student, false)
             );
             studentList.appendChild(row);
@@ -7541,6 +7600,11 @@
       viewButton.addEventListener("click", () => setStreakEditing(false));
       practiceUndoButton.addEventListener("click", () => {
         if (!practiceUndoButton.disabled) armOrConfirmStreakAction("undo", "", "undo", undoStreakChange);
+      });
+      practicePointsButton.addEventListener("click", () => {
+        areStreakPointsHidden = !areStreakPointsHidden;
+        renderAll();
+        statusText.textContent = areStreakPointsHidden ? "streak points hidden" : "streak points revealed";
       });
       practiceExitButton.addEventListener("pointerdown", (event) => {
         event.preventDefault();
