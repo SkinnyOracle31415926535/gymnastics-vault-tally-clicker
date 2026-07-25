@@ -2538,8 +2538,8 @@
           </div>
 
           <div class="mode-view-actions" role="group" aria-label="Streak counter mode">
-            <button id="streakViewButton" class="is-active" type="button" aria-pressed="true">view</button>
-            <button id="streakEditButton" type="button" aria-pressed="false">edit</button>
+            <button id="streakViewButton" type="button" aria-pressed="false">view</button>
+            <button id="streakEditButton" class="is-active" type="button" aria-pressed="true">edit</button>
           </div>
 
           <div id="streakStudentList" class="streak-student-list"></div>
@@ -6708,10 +6708,10 @@
 
       function renderStreakViewMode() {
         const isPracticeView = state.mode === "streak" && !isStreakEditing && streakState.screen === "points";
-        viewButton.classList.toggle("is-active", !isStreakEditing);
-        editButton.classList.toggle("is-active", isStreakEditing);
-        viewButton.setAttribute("aria-pressed", String(!isStreakEditing));
-        editButton.setAttribute("aria-pressed", String(isStreakEditing));
+        viewButton.classList.toggle("is-active", isPracticeView);
+        editButton.classList.toggle("is-active", !isPracticeView);
+        viewButton.setAttribute("aria-pressed", String(isPracticeView));
+        editButton.setAttribute("aria-pressed", String(!isPracticeView));
         panel.classList.toggle("practice-view", isPracticeView);
         document.body.classList.toggle("streak-practice-view", isPracticeView);
         practiceFooter.hidden = !isPracticeView;
@@ -7085,6 +7085,9 @@
 
       function setScreen(screen) {
         clearAllStreakConfirmations();
+        // Switching screens is always an edit action. It must not carry a
+        // previous View request forward to the next screen click.
+        isStreakEditing = true;
         streakState.screen = screen === "team" ? "team" : "points";
         streakState.mode = streakState.screen === "team" ? "team" : "individual";
         if (streakState.screen === "team") streakState.teamEnabled = true;
