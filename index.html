@@ -2188,6 +2188,10 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
 
+      #multiplePanel.practice-view .counter-card {
+        grid-template-columns: minmax(0, 1fr) minmax(64px, 72px) repeat(2, minmax(44px, 48px)) minmax(50px, 54px);
+      }
+
       .class-roster-actions {
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
@@ -4615,7 +4619,7 @@
 
         const score = createMultipleScore(item, {
           hideValue: !isMultipleEditing && areMultipleScoresHidden,
-          showDailyRecord: isMultipleEditing && state.showMultipleDailyRecords
+          showDailyRecord: state.showMultipleDailyRecords
         });
 
         const actions = document.createElement("div");
