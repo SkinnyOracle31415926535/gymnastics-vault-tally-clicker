@@ -415,20 +415,24 @@
     }
 
     .stopwatch-play-undo,
-    .stopwatch-hold-exit {
+    .stopwatch-hold-exit,
+    .hold-to-exit {
       -webkit-touch-callout: none;
       -webkit-user-select: none;
       user-select: none;
+      touch-action: manipulation;
     }
 
-    .stopwatch-hold-exit {
+    .stopwatch-hold-exit,
+    .hold-to-exit {
       position: relative;
       overflow: hidden;
       color: var(--green);
       background: var(--black);
     }
 
-    .stopwatch-hold-exit.holding {
+    .stopwatch-hold-exit.holding,
+    .hold-to-exit.holding {
       color: var(--black);
       background: var(--green);
     }
@@ -605,10 +609,11 @@
     }
 
     .multiple-controls {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: 1fr;
     }
 
-    .multiple-controls .clear {
+    .multiple-controls .clear,
+    .multiple-controls .multiple-action {
       grid-column: 1 / -1;
     }
 
@@ -678,7 +683,7 @@
     }
 
     #multiplePanel.practice-view .counter-card {
-      grid-template-columns: minmax(0, 1fr) minmax(64px, 88px) repeat(3, minmax(52px, 66px));
+      grid-template-columns: minmax(0, 1fr) minmax(88px, 104px) repeat(3, minmax(52px, 66px));
       min-height: 0;
       padding: 4px;
       gap: 4px;
@@ -693,6 +698,41 @@
       min-height: 0;
       border-width: 3px;
       font-size: clamp(28px, 5.5vh, 46px);
+      overflow: hidden;
+    }
+
+    #multiplePanel.practice-view .counter-score-value {
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #multiplePanel.practice-view .counter-score--compact-record {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas: "record value";
+      align-items: center;
+      gap: 2px;
+      padding: 2px 3px;
+    }
+
+    #multiplePanel.practice-view .counter-score--compact-record .counter-score-value {
+      grid-area: value;
+      font-size: clamp(20px, 3.5vh, 32px);
+      line-height: 1;
+    }
+
+    #multiplePanel.practice-view .counter-score--compact-record .counter-daily-record {
+      grid-area: record;
+      min-width: 0;
+      overflow: hidden;
+      font-size: clamp(9px, 1.8vh, 12px);
+      line-height: 1;
+      text-align: right;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     #multiplePanel.practice-view .counter-actions {
@@ -824,14 +864,15 @@
 
     #streakPanel.practice-view .streak-practice-footer {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 6px;
     }
 
     #streakPanel.practice-view .streak-practice-footer button {
       min-height: 52px;
       padding: 4px 6px;
-      font-size: clamp(16px, 3vw, 24px);
+      font-size: clamp(13px, 3vw, 24px);
+      line-height: 1;
       text-transform: lowercase;
     }
 
@@ -1755,8 +1796,15 @@
       gap: 8px;
     }
 
+    .streak-list-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
     .streak-actions button,
-    .streak-row-actions button {
+    .streak-row-actions button,
+    .streak-list-actions button {
       min-height: 54px;
       padding: 7px 9px;
       font-size: 22px;
@@ -2233,11 +2281,11 @@
       }
 
       .multiple-controls {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: 1fr;
       }
 
       #multiplePanel.practice-view .counter-card {
-        grid-template-columns: minmax(0, 1fr) minmax(64px, 72px) repeat(2, minmax(44px, 48px)) minmax(50px, 54px);
+        grid-template-columns: minmax(0, 1fr) minmax(88px, 96px) repeat(2, minmax(44px, 48px)) minmax(50px, 54px);
       }
 
       .class-roster-actions {
@@ -2441,11 +2489,8 @@
         <div id="multipleLeader" class="display label-display" aria-live="polite">multiple points</div>
         <div id="multipleList" class="counter-list"></div>
         <div class="controls multiple-controls">
-          <button id="resetMultiple" class="clear" type="button">reset multiple</button>
-          <button id="addMultiple" class="multiple-action" type="button">add</button>
-          <button id="removeMultiple" class="multiple-action remove-action" type="button">remove</button>
           <button id="multipleViewButton" class="multiple-action" type="button" aria-pressed="false">view</button>
-          <button id="multipleEditButton" class="multiple-action" type="button" aria-pressed="true">edit</button>
+          <button id="resetMultiple" class="clear" type="button">reset multiple</button>
         </div>
         <div id="multiplePracticeFooter" class="multiple-practice-footer" hidden>
           <button id="multipleScoresButton" type="button" aria-pressed="false">hide scores</button>
@@ -2536,7 +2581,7 @@
         </div>
         <div id="todoPracticeFooter" class="todo-practice-footer" hidden>
           <button id="todoPracticeUndo" type="button" disabled>undo</button>
-          <button id="exitTodoView" type="button">exit view</button>
+          <button id="exitTodoView" class="hold-to-exit" type="button">hold to exit view</button>
         </div>
       </section>
 
@@ -2581,18 +2626,12 @@
             </div>
           </div>
 
-          <div class="streak-actions">
-            <button id="streakResetScoresButton" type="button">reset scores</button>
-            <button id="streakCopySummaryButton" type="button">copy</button>
-          </div>
-
-          <div class="mode-view-actions" role="group" aria-label="Streak counter mode">
-            <button id="streakViewButton" type="button" aria-pressed="false">view</button>
-            <button id="streakEditButton" class="is-active" type="button" aria-pressed="true">edit</button>
-          </div>
-
           <div id="streakStudentList" class="streak-student-list"></div>
           <div id="streakEmptyState" class="streak-empty">no names yet</div>
+          <div class="streak-list-actions">
+            <button id="streakViewButton" type="button" aria-pressed="false">view</button>
+            <button id="streakResetScoresButton" type="button">reset scores</button>
+          </div>
           <div id="streakClassSlot" class="class-roster-slot"></div>
         </section>
 
@@ -2630,8 +2669,9 @@
         </div>
 
         <div id="streakPracticeFooter" class="streak-practice-footer" hidden>
+          <button id="streakPracticeUndo" type="button" disabled>undo</button>
           <button id="streakPracticeResetScores" type="button">reset scores</button>
-          <button id="streakPracticeExit" type="button">exit view</button>
+          <button id="streakPracticeExit" class="hold-to-exit" type="button">hold to exit view</button>
         </div>
 
       </section>
@@ -2922,10 +2962,7 @@
     const showMultipleLeader = document.getElementById("showMultipleLeader");
     const multipleList = document.getElementById("multipleList");
     const resetMultiple = document.getElementById("resetMultiple");
-    const addMultiple = document.getElementById("addMultiple");
-    const removeMultiple = document.getElementById("removeMultiple");
     const multipleViewButton = document.getElementById("multipleViewButton");
-    const multipleEditButton = document.getElementById("multipleEditButton");
     const multiplePracticeFooter = document.getElementById("multiplePracticeFooter");
     const multipleScoresButton = document.getElementById("multipleScoresButton");
     const resetMultipleView = document.getElementById("resetMultipleView");
@@ -3081,6 +3118,7 @@
     let todoRedoStack = [];
     let todoActionConfirmationKey = null;
     let todoActionConfirmationTimer = null;
+    let todoViewExitTimer = null;
     let stopwatchUndoStack = [];
     let audioContext = null;
     let selectedRemovalIds = new Set();
@@ -4521,10 +4559,11 @@
     function createMultipleScore(item, options = {}) {
       const {
         hideValue = false,
-        showDailyRecord = state.showMultipleDailyRecords
+        showDailyRecord = state.showMultipleDailyRecords,
+        compactDailyRecord = false
       } = options;
       const score = document.createElement("div");
-      score.className = "counter-score";
+      score.className = "counter-score" + (compactDailyRecord && showDailyRecord && !hideValue ? " counter-score--compact-record" : "");
 
       const value = document.createElement("span");
       value.className = "counter-score-value";
@@ -4534,7 +4573,7 @@
       if (showDailyRecord && !hideValue) {
         const record = document.createElement("span");
         record.className = "counter-daily-record";
-        record.textContent = "best today: " + getMultipleDailyRecord(item.name);
+        record.textContent = (compactDailyRecord ? "best " : "best today: ") + getMultipleDailyRecord(item.name);
         score.appendChild(record);
       }
 
@@ -4545,12 +4584,8 @@
       const isPracticeView = state.mode === "multiple" && !isMultipleEditing;
       multipleViewButton.classList.toggle("is-active", isPracticeView);
       multipleViewButton.setAttribute("aria-pressed", String(isPracticeView));
-      multipleEditButton.classList.toggle("is-active", isMultipleEditing);
-      multipleEditButton.setAttribute("aria-pressed", String(isMultipleEditing));
       panels.multiple.classList.toggle("practice-view", isPracticeView);
       document.body.classList.toggle("multiple-practice-view", isPracticeView);
-      addMultiple.hidden = !isMultipleEditing;
-      removeMultiple.hidden = !isMultipleEditing;
       multiplePracticeFooter.hidden = !isPracticeView;
       multipleScoresButton.textContent = areMultipleScoresHidden ? "reveal scores" : "hide scores";
       multipleScoresButton.setAttribute("aria-pressed", String(areMultipleScoresHidden));
@@ -4681,7 +4716,8 @@
 
         const score = createMultipleScore(item, {
           hideValue: !isMultipleEditing && areMultipleScoresHidden,
-          showDailyRecord: state.showMultipleDailyRecords
+          showDailyRecord: state.showMultipleDailyRecords,
+          compactDailyRecord: !isMultipleEditing
         });
 
         const actions = document.createElement("div");
@@ -4964,6 +5000,7 @@
     }
 
     function setListViewing(viewing) {
+      cancelTodoViewExitHold();
       clearTodoActionConfirmation();
       if (viewing && !getSelectedList()) {
         statusbar.textContent = "make a TODO first";
@@ -4974,6 +5011,27 @@
       draggedSkillId = null;
       renderList();
       statusbar.textContent = viewing ? "TODO view ready" : "TODO ready";
+    }
+
+    function cancelTodoViewExitHold() {
+      window.clearTimeout(todoViewExitTimer);
+      todoViewExitTimer = null;
+      exitTodoView.classList.remove("holding");
+      exitTodoView.textContent = "hold to exit view";
+    }
+
+    function exitTodoViewAfterHold() {
+      cancelTodoViewExitHold();
+      if (state.mode !== "list" || !isListViewing) return;
+      setListViewing(false);
+      window.requestAnimationFrame(() => listViewButton.focus());
+    }
+
+    function beginTodoViewExitHold() {
+      if (state.mode !== "list" || !isListViewing || todoViewExitTimer) return;
+      exitTodoView.classList.add("holding");
+      exitTodoView.textContent = "keep holding...";
+      todoViewExitTimer = window.setTimeout(exitTodoViewAfterHold, 1200);
     }
 
     function moveSkillRelative(sourceId, targetId, insertAfter) {
@@ -5048,6 +5106,7 @@
         draggedSkillId = null;
       }
       const isPracticeView = state.mode === "list" && isListViewing;
+      if (!isPracticeView) cancelTodoViewExitHold();
       listPanel.classList.toggle("is-editing", isListEditing);
       listPanel.classList.toggle("is-viewing", isPracticeView);
       document.body.classList.toggle("todo-practice-view", isPracticeView);
@@ -6242,10 +6301,7 @@
 
     clearButton.addEventListener("click", armOrConfirmSingleClear);
     resetMultiple.addEventListener("click", () => openResetDialog("multiple"));
-    addMultiple.addEventListener("click", openAddDialog);
-    removeMultiple.addEventListener("click", openRemoveDialog);
     multipleViewButton.addEventListener("click", () => setMultipleEditing(false));
-    multipleEditButton.addEventListener("click", () => setMultipleEditing(true));
     multipleScoresButton.addEventListener("click", () => {
       areMultipleScoresHidden = !areMultipleScoresHidden;
       renderMultiple();
@@ -6287,7 +6343,27 @@
     addSkill.addEventListener("click", openAddSkillDialog);
     editTodo.addEventListener("click", () => setListEditing(!isListEditing));
     listViewButton.addEventListener("click", () => setListViewing(true));
-    exitTodoView.addEventListener("click", () => setListViewing(false));
+    exitTodoView.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      exitTodoView.setPointerCapture?.(event.pointerId);
+      beginTodoViewExitHold();
+    });
+    ["pointerup", "pointercancel", "pointerleave", "lostpointercapture"].forEach((eventName) => {
+      exitTodoView.addEventListener(eventName, cancelTodoViewExitHold);
+    });
+    exitTodoView.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      if (!event.repeat) beginTodoViewExitHold();
+    });
+    exitTodoView.addEventListener("keyup", (event) => {
+      if (event.key === "Enter" || event.key === " ") cancelTodoViewExitHold();
+    });
+    exitTodoView.addEventListener("click", (event) => event.preventDefault());
+    window.addEventListener("blur", cancelTodoViewExitHold);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) cancelTodoViewExitHold();
+    });
     listPlus.addEventListener("click", () => changeCurrentSkill(1));
     listMinus.addEventListener("click", () => {
       if (!listMinus.disabled) armOrConfirmTodoAction("minus", "−", () => changeCurrentSkill(-1));
@@ -6440,9 +6516,7 @@
       const pointsScreenView = document.getElementById("streakPointsScreenView");
       const teamModeView = document.getElementById("streakTeamModeView");
       const resetScoresButton = document.getElementById("streakResetScoresButton");
-      const copySummaryButton = document.getElementById("streakCopySummaryButton");
       const viewButton = document.getElementById("streakViewButton");
-      const editButton = document.getElementById("streakEditButton");
       const teamTargetInput = document.getElementById("streakTeamTargetInput");
       const teamStreakReadout = document.getElementById("streakTeamStreakReadout");
       const teamPointsReadout = document.getElementById("streakTeamPointsReadout");
@@ -6452,6 +6526,7 @@
       const undoButton = document.getElementById("streakUndoButton");
       const redoButton = document.getElementById("streakRedoButton");
       const practiceFooter = document.getElementById("streakPracticeFooter");
+      const practiceUndoButton = document.getElementById("streakPracticeUndo");
       const practiceResetScoresButton = document.getElementById("streakPracticeResetScores");
       const practiceExitButton = document.getElementById("streakPracticeExit");
       const soundToggle = document.getElementById("streakSoundToggle");
@@ -6477,6 +6552,7 @@
       let teamResetArmed = false;
       let streakActionConfirmationKey = null;
       let streakActionConfirmationTimer = null;
+      let practiceExitTimer = null;
       let undoStack = [];
       let redoStack = [];
       let isStreakEditing = true;
@@ -6692,11 +6768,16 @@
       }
 
       function renderHistoryControls() {
-        undoButton.disabled = undoStack.length === 0;
+        const canUndo = undoStack.length > 0;
+        const undoLabel = isStreakActionConfirmationArmed("undo") ? "tap undo again" : "undo";
+        undoButton.disabled = !canUndo;
+        practiceUndoButton.disabled = !canUndo;
         redoButton.disabled = redoStack.length === 0;
-        undoButton.title = undoStack.length ? "undo last streak change" : "nothing to undo";
+        undoButton.title = canUndo ? "undo last streak change" : "nothing to undo";
+        practiceUndoButton.title = undoButton.title;
         redoButton.title = redoStack.length ? "redo last streak change" : "nothing to redo";
-        undoButton.textContent = isStreakActionConfirmationArmed("undo") ? "tap undo again" : "undo";
+        undoButton.textContent = undoLabel;
+        practiceUndoButton.textContent = undoLabel;
         redoButton.textContent = isStreakActionConfirmationArmed("redo") ? "tap redo again" : "redo";
       }
 
@@ -6792,18 +6873,43 @@
         });
       }
 
+      function isStreakPracticeView() {
+        return state.mode === "streak" && !isStreakEditing && streakState.screen === "points";
+      }
+
+      function cancelPracticeExitHold() {
+        window.clearTimeout(practiceExitTimer);
+        practiceExitTimer = null;
+        practiceExitButton.classList.remove("holding");
+        practiceExitButton.textContent = "hold to exit view";
+      }
+
+      function exitStreakPracticeViewAfterHold() {
+        cancelPracticeExitHold();
+        if (!isStreakPracticeView()) return;
+        setStreakEditing(true);
+        window.requestAnimationFrame(() => viewButton.focus());
+      }
+
+      function beginPracticeExitHold() {
+        if (!isStreakPracticeView() || practiceExitTimer) return;
+        practiceExitButton.classList.add("holding");
+        practiceExitButton.textContent = "keep holding...";
+        practiceExitTimer = window.setTimeout(exitStreakPracticeViewAfterHold, 1200);
+      }
+
       function renderStreakViewMode() {
-        const isPracticeView = state.mode === "streak" && !isStreakEditing && streakState.screen === "points";
+        const isPracticeView = isStreakPracticeView();
         viewButton.classList.toggle("is-active", isPracticeView);
-        editButton.classList.toggle("is-active", !isPracticeView);
         viewButton.setAttribute("aria-pressed", String(isPracticeView));
-        editButton.setAttribute("aria-pressed", String(!isPracticeView));
+        if (!isPracticeView) cancelPracticeExitHold();
         panel.classList.toggle("practice-view", isPracticeView);
         document.body.classList.toggle("streak-practice-view", isPracticeView);
         practiceFooter.hidden = !isPracticeView;
       }
 
       function setStreakEditing(editing) {
+        cancelPracticeExitHold();
         clearAllStreakConfirmations();
         isStreakEditing = editing;
         renderAll();
@@ -7297,19 +7403,6 @@
         }
       }
 
-      async function copySummary() {
-        const lines = [
-          streakState.rosterName,
-          ...streakState.students.map((student) => student.name + ": " + student.points + " point(s), streak " + student.streak + "/" + student.target)
-        ];
-        try {
-          await navigator.clipboard.writeText(lines.join("\n"));
-          statusText.textContent = "copied";
-        } catch (error) {
-          statusText.textContent = "copy unavailable";
-        }
-      }
-
       studentList.addEventListener("click", (event) => {
         const button = event.target.closest("button");
         if (!button) return;
@@ -7351,10 +7444,31 @@
 
       resetScoresButton.addEventListener("click", resetScores);
       practiceResetScoresButton.addEventListener("click", resetScores);
-      copySummaryButton.addEventListener("click", copySummary);
       viewButton.addEventListener("click", () => setStreakEditing(false));
-      editButton.addEventListener("click", () => setStreakEditing(true));
-      practiceExitButton.addEventListener("click", () => setStreakEditing(true));
+      practiceUndoButton.addEventListener("click", () => {
+        if (!practiceUndoButton.disabled) armOrConfirmStreakAction("undo", "", "undo", undoStreakChange);
+      });
+      practiceExitButton.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        practiceExitButton.setPointerCapture?.(event.pointerId);
+        beginPracticeExitHold();
+      });
+      ["pointerup", "pointercancel", "pointerleave", "lostpointercapture"].forEach((eventName) => {
+        practiceExitButton.addEventListener(eventName, cancelPracticeExitHold);
+      });
+      practiceExitButton.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        if (!event.repeat) beginPracticeExitHold();
+      });
+      practiceExitButton.addEventListener("keyup", (event) => {
+        if (event.key === "Enter" || event.key === " ") cancelPracticeExitHold();
+      });
+      practiceExitButton.addEventListener("click", (event) => event.preventDefault());
+      window.addEventListener("blur", cancelPracticeExitHold);
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) cancelPracticeExitHold();
+      });
       pointsScreenButton.addEventListener("click", () => setScreen("points"));
       teamScreenButton.addEventListener("click", () => setScreen("team"));
       teamPassButton.addEventListener("click", () => {
@@ -7390,6 +7504,7 @@
           control === teamPassButton ||
           control === teamBreakButton ||
           control === undoButton ||
+          control === practiceUndoButton ||
           control === redoButton ||
           ((control === resetScoresButton || control === practiceResetScoresButton) && scoreResetArmed) ||
           (control === resetTeamButton && teamResetArmed);
