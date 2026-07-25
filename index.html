@@ -1091,6 +1091,10 @@
       font-size: 17px;
     }
 
+    .list-controls .todo-action-armed {
+      font-size: clamp(24px, 6vw, 38px);
+    }
+
     .list-controls .clear {
       grid-column: 1 / -1;
     }
@@ -2718,6 +2722,8 @@
     };
     let todoUndoStack = [];
     let todoRedoStack = [];
+    let todoActionConfirmationKey = null;
+    let todoActionConfirmationTimer = null;
     let stopwatchUndoStack = [];
     let audioContext = null;
     let selectedRemovalIds = new Set();
@@ -3822,9 +3828,55 @@
     }
 
     function rememberTodoState() {
+      clearTodoActionConfirmation();
       todoUndoStack.push(cloneTodoState());
       if (todoUndoStack.length > 30) todoUndoStack.shift();
       todoRedoStack = [];
+    }
+
+    function isTodoActionConfirmationArmed(action) {
+      return todoActionConfirmationKey === action;
+    }
+
+    function clearTodoActionConfirmation(render = false) {
+      window.clearTimeout(todoActionConfirmationTimer);
+      todoActionConfirmationTimer = null;
+      todoActionConfirmationKey = null;
+      if (render) renderList();
+    }
+
+    function armOrConfirmTodoAction(action, label, callback) {
+      if (isTodoActionConfirmationArmed(action)) {
+        clearTodoActionConfirmation();
+        callback();
+        return;
+      }
+
+      clearTodoActionConfirmation();
+      todoActionConfirmationKey = action;
+      renderList();
+      statusbar.textContent = "tap " + label + " again to confirm";
+      todoActionConfirmationTimer = window.setTimeout(() => {
+        if (!isTodoActionConfirmationArmed(action)) return;
+        todoActionConfirmationTimer = null;
+        todoActionConfirmationKey = null;
+        renderList();
+        statusbar.textContent = label + " confirmation canceled";
+      }, 3000);
+    }
+
+    function renderTodoActionControls() {
+      const minusArmed = isTodoActionConfirmationArmed("minus");
+      listMinus.textContent = minusArmed ? "tap − again" : "−";
+      listMinus.classList.toggle("todo-action-armed", minusArmed);
+      listMinus.setAttribute(
+        "aria-label",
+        minusArmed
+          ? "Tap minus again to remove one repetition from the current skill"
+          : "Remove one repetition from the current skill"
+      );
+      resetCurrentSkill.textContent = isTodoActionConfirmationArmed("reset-current") ? "tap reset again" : "reset";
+      resetTodo.textContent = isTodoActionConfirmationArmed("reset-all") ? "tap reset all again" : "reset all";
     }
 
     function renderTodoHistoryControls() {
@@ -3832,9 +3884,12 @@
       todoRedoButton.disabled = todoRedoStack.length === 0;
       todoUndoButton.title = todoUndoStack.length ? "undo last TODO change" : "nothing to undo";
       todoRedoButton.title = todoRedoStack.length ? "redo last TODO change" : "nothing to redo";
+      todoUndoButton.textContent = isTodoActionConfirmationArmed("undo") ? "tap undo again" : "undo";
+      todoRedoButton.textContent = isTodoActionConfirmationArmed("redo") ? "tap redo again" : "redo";
     }
 
     function restoreTodoHistory(snapshot, message) {
+      clearTodoActionConfirmation();
       state.lists = normalizeLists(snapshot.lists);
       state.selectedListId = state.lists.some((list) => list.id === snapshot.selectedListId)
         ? snapshot.selectedListId
@@ -3848,6 +3903,7 @@
     }
 
     function undoTodoChange() {
+      clearTodoActionConfirmation();
       const previous = todoUndoStack.pop();
       if (!previous) return;
       todoRedoStack.push(cloneTodoState());
@@ -3855,6 +3911,7 @@
     }
 
     function redoTodoChange() {
+      clearTodoActionConfirmation();
       const next = todoRedoStack.pop();
       if (!next) return;
       todoUndoStack.push(cloneTodoState());
@@ -4500,6 +4557,7 @@
     }
 
     function setListEditing(editing) {
+      clearTodoActionConfirmation();
       if (editing && !getSelectedList()) {
         statusbar.textContent = "make a TODO first";
         return;
@@ -4511,6 +4569,7 @@
     }
 
     function moveSkillRelative(sourceId, targetId, insertAfter) {
+      clearTodoActionConfirmation();
       if (sourceId === targetId) return;
       const list = getSelectedList();
       const sourceIndex = list?.skills.findIndex((skill) => skill.id === sourceId) ?? -1;
@@ -4607,6 +4666,7 @@
       listMinus.disabled = !currentSkill || currentSkill.completed === 0;
       resetCurrentSkill.disabled = !currentSkill || currentSkill.completed === 0;
       resetTodo.disabled = !hasSkills;
+      renderTodoActionControls();
 
       if (!hasList) {
         listProgressText.textContent = "0% complete";
@@ -4732,6 +4792,7 @@
     }
 
     function openSkillEditDialog(skillId, field = "name") {
+      clearTodoActionConfirmation(true);
       const skill = getSkillById(skillId);
       if (!skill) {
         statusbar.textContent = "skill not found";
@@ -5196,6 +5257,7 @@
     function setMode(mode) {
       if (bratKeyboardState) finishBratKeyboard(bratKeyboardState.isFormField ? "hide" : "cancel");
       cancelCounterClear(false);
+      clearTodoActionConfirmation();
       streakCounter.cancelConfirmations();
       if (stopwatchPlaying && mode !== "stopwatch") exitStopwatchPlay();
       state.mode = mode;
@@ -5529,6 +5591,7 @@
     }
 
     function openNewListDialog() {
+      clearTodoActionConfirmation(true);
       newListName.value = "";
       openCounterDialog(newListDialog);
       window.requestAnimationFrame(() => newListName.focus());
@@ -5560,6 +5623,7 @@
     }
 
     function openRenameListDialog() {
+      clearTodoActionConfirmation(true);
       const list = getSelectedList();
       if (!list) return;
       renameListName.value = list.name;
@@ -5594,6 +5658,7 @@
     }
 
     function openDeleteListDialog() {
+      clearTodoActionConfirmation(true);
       const list = getSelectedList();
       if (!list) return;
       deleteListDescription.textContent = "this removes " + list.name + ", every skill, and its progress.";
@@ -5615,6 +5680,7 @@
     }
 
     function openAddSkillDialog() {
+      clearTodoActionConfirmation(true);
       if (!getSelectedList()) {
         statusbar.textContent = "make a TODO first";
         return;
@@ -5683,6 +5749,7 @@
         window.setTimeout(() => {
           const completedList = state.lists.find((item) => item.id === list.id);
           if (!completedList || getCurrentSkill(completedList)) return;
+          clearTodoActionConfirmation();
           completedList.skills.forEach((item) => {
             item.completed = 0;
           });
@@ -5769,6 +5836,7 @@
 
     listSelector.addEventListener("change", () => {
       if (!state.lists.some((list) => list.id === listSelector.value)) return;
+      clearTodoActionConfirmation();
       state.selectedListId = listSelector.value;
       isListEditing = false;
       saveState();
@@ -5781,11 +5849,21 @@
     addSkill.addEventListener("click", openAddSkillDialog);
     editTodo.addEventListener("click", () => setListEditing(!isListEditing));
     listPlus.addEventListener("click", () => changeCurrentSkill(1));
-    listMinus.addEventListener("click", () => changeCurrentSkill(-1));
-    resetCurrentSkill.addEventListener("click", resetCurrentSkillProgress);
-    resetTodo.addEventListener("click", resetEntireTodo);
-    todoUndoButton.addEventListener("click", undoTodoChange);
-    todoRedoButton.addEventListener("click", redoTodoChange);
+    listMinus.addEventListener("click", () => {
+      if (!listMinus.disabled) armOrConfirmTodoAction("minus", "−", () => changeCurrentSkill(-1));
+    });
+    resetCurrentSkill.addEventListener("click", () => {
+      if (!resetCurrentSkill.disabled) armOrConfirmTodoAction("reset-current", "reset", resetCurrentSkillProgress);
+    });
+    resetTodo.addEventListener("click", () => {
+      if (!resetTodo.disabled) armOrConfirmTodoAction("reset-all", "reset all", resetEntireTodo);
+    });
+    todoUndoButton.addEventListener("click", () => {
+      if (!todoUndoButton.disabled) armOrConfirmTodoAction("undo", "undo", undoTodoChange);
+    });
+    todoRedoButton.addEventListener("click", () => {
+      if (!todoRedoButton.disabled) armOrConfirmTodoAction("redo", "redo", redoTodoChange);
+    });
     closeCelebration.addEventListener("click", hideTodoCelebration);
     chooseStopwatchClass.addEventListener("click", openStopwatchClassDialog);
     startStopwatchPlay.addEventListener("click", openStopwatchRoster);
