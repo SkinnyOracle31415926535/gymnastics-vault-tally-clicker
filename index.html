@@ -281,6 +281,10 @@
       text-transform: lowercase;
     }
 
+    .stopwatch-reset-times {
+      grid-column: 1 / -1;
+    }
+
     .stopwatch-play {
       color: var(--green);
       background: var(--black);
@@ -2269,6 +2273,7 @@
           <div class="stopwatch-actions">
             <button id="chooseStopwatchClass" type="button">choose class</button>
             <button id="startStopwatchPlay" class="stopwatch-play" type="button">play</button>
+            <button id="resetStopwatchTimes" class="remove-action stopwatch-reset-times" type="button" disabled>reset times</button>
           </div>
         </div>
       </section>
@@ -2657,6 +2662,7 @@
     const stopwatchClassNote = document.getElementById("stopwatchClassNote");
     const chooseStopwatchClass = document.getElementById("chooseStopwatchClass");
     const startStopwatchPlay = document.getElementById("startStopwatchPlay");
+    const resetStopwatchTimes = document.getElementById("resetStopwatchTimes");
     const stopwatchClassDialog = document.getElementById("stopwatchClassDialog");
     const stopwatchClassOptions = document.getElementById("stopwatchClassOptions");
     const cancelStopwatchClass = document.getElementById("cancelStopwatchClass");
@@ -4896,6 +4902,8 @@
     function renderStopwatch() {
       const didResetRecords = ensureStopwatchRecordsCurrent();
       const savedClass = getStopwatchClass();
+      const stopwatchRecords = savedClass ? state.stopwatch.records[savedClass.id] || {} : {};
+      const hasSavedTimes = Boolean(savedClass?.students.some((name) => stopwatchRecords[normalizeMultipleName(name)]));
       stopwatchClassName.textContent = savedClass?.name || "no class selected";
       stopwatchClassNote.textContent = savedClass?.students.length
         ? savedClass.students.length + " kids ready for timed forward rolls."
@@ -4903,6 +4911,7 @@
           ? "add names to this class in multiple before using play mode."
           : "save a class in multiple, then choose it here.";
       startStopwatchPlay.disabled = !savedClass?.students.length;
+      resetStopwatchTimes.disabled = !hasSavedTimes;
       if (didResetRecords) saveState();
       if (stopwatchRosterDialog.open) renderStopwatchRoster();
       if (stopwatchTimerDialog.open) renderStopwatchTimer();
@@ -5326,13 +5335,32 @@
       statusbar.textContent = "multiple points reset";
     }
 
+    function performStopwatchReset() {
+      const savedClass = getStopwatchClass();
+      if (!savedClass || !state.stopwatch.records[savedClass.id]) return;
+      delete state.stopwatch.records[savedClass.id];
+      saveState();
+      renderStopwatch();
+      playSound("clear");
+      statusbar.textContent = savedClass.name + " stopwatch times reset";
+      window.requestAnimationFrame(() => chooseStopwatchClass.focus());
+    }
+
     function renderResetDialog() {
       const isMultiple = pendingResetKind === "multiple";
-      resetDialogTitle.textContent = isMultiple ? "reset all multiple scores?" : "reset single counter?";
+      const isStopwatch = pendingResetKind === "stopwatch";
+      const stopwatchClass = isStopwatch ? getStopwatchClass() : null;
+      resetDialogTitle.textContent = isStopwatch
+        ? "reset stopwatch times?"
+        : isMultiple
+          ? "reset all multiple scores?"
+          : "reset single counter?";
       resetDialogDescription.textContent = resetConfirmStep === 1
-        ? isMultiple
-          ? "this will set every multiple score to zero. continue to the final confirmation."
-          : "this will set the single counter to zero. continue to the final confirmation."
+        ? isStopwatch
+          ? "this will clear every saved time for " + (stopwatchClass?.name || "this class") + ". continue to the final confirmation."
+          : isMultiple
+            ? "this will set every multiple score to zero. continue to the final confirmation."
+            : "this will set the single counter to zero. continue to the final confirmation."
         : "last check: this reset cannot be undone.";
       resetStepOne.classList.toggle("active", resetConfirmStep === 1);
       resetStepTwo.classList.toggle("active", resetConfirmStep === 2);
@@ -5358,6 +5386,7 @@
       closeCounterDialog(resetDialog);
       if (resetKind === "multiple") performMultipleReset();
       if (resetKind === "single") performSingleReset();
+      if (resetKind === "stopwatch") performStopwatchReset();
     }
 
     function openNewListDialog() {
@@ -5621,6 +5650,7 @@
     closeCelebration.addEventListener("click", hideTodoCelebration);
     chooseStopwatchClass.addEventListener("click", openStopwatchClassDialog);
     startStopwatchPlay.addEventListener("click", openStopwatchRoster);
+    resetStopwatchTimes.addEventListener("click", () => openResetDialog("stopwatch"));
     cancelStopwatchClass.addEventListener("click", () => closeCounterDialog(stopwatchClassDialog));
     stopwatchStart.addEventListener("click", startStopwatchTimer);
     stopwatchStop.addEventListener("click", stopStopwatchTimer);
