@@ -2742,6 +2742,8 @@
     let stopwatchExitTimer = null;
     let stopwatchReviewConfirmationAction = null;
     let stopwatchReviewConfirmationTimer = null;
+    let stopwatchUndoConfirmationArmed = false;
+    let stopwatchUndoConfirmationTimer = null;
     let draggedSkillId = null;
     let bratKeyboardState = null;
     let bratKeyboardShifted = false;
@@ -4317,6 +4319,7 @@
     }
 
     function openClassPickerDialog() {
+      streakCounter.cancelConfirmations(true);
       if (!state.classes.length) {
         statusbar.textContent = "no saved classes yet";
         return;
@@ -4335,6 +4338,7 @@
     }
 
     function openNewClassDialog() {
+      streakCounter.cancelConfirmations(true);
       selectedClassEditId = null;
       classDialogTitle.textContent = "new class";
       deleteClassFromEdit.hidden = true;
@@ -4348,6 +4352,7 @@
     }
 
     function openEditClassDialog() {
+      streakCounter.cancelConfirmations(true);
       const savedClass = getSelectedClass();
       if (!savedClass) {
         statusbar.textContent = "choose a saved class first";
@@ -4405,6 +4410,7 @@
         return false;
       }
 
+      streakCounter.cancelConfirmations(true);
       const existingClass = state.classes.find((savedClass) => savedClass.id === selectedClassEditId);
       if (existingClass) {
         existingClass.neededByStudent = normalizeNeededByStudent(existingClass.neededByStudent, students);
@@ -4437,6 +4443,7 @@
         return;
       }
 
+      streakCounter.cancelConfirmations(true);
       if (state.mode === "streak") {
         if (streakCounter.hasProgress() && !window.confirm("Load " + savedClass.name + " and reset the current streaks and points?")) return;
         streakCounter.loadClass(savedClass);
@@ -4458,6 +4465,7 @@
     function deleteSelectedClass() {
       const savedClass = getSelectedClass();
       if (!savedClass) return false;
+      streakCounter.cancelConfirmations(true);
       if (!window.confirm("Delete saved class " + savedClass.name + "?")) return false;
 
       state.classes = state.classes.filter((item) => item.id !== savedClass.id);
@@ -4794,6 +4802,7 @@
     }
 
     function rememberStopwatchState() {
+      clearStopwatchUndoConfirmation();
       stopwatchUndoStack.push(cloneStopwatchRecords());
       if (stopwatchUndoStack.length > 30) stopwatchUndoStack.shift();
     }
@@ -4802,9 +4811,11 @@
       const hasUndo = stopwatchUndoStack.length > 0;
       stopwatchPlayUndo.disabled = !hasUndo;
       stopwatchPlayUndo.title = hasUndo ? "undo last stopwatch change" : "nothing to undo";
+      stopwatchPlayUndo.textContent = stopwatchUndoConfirmationArmed ? "tap undo again" : "undo";
     }
 
     function undoStopwatchChange() {
+      clearStopwatchUndoConfirmation();
       const previousRecords = stopwatchUndoStack.pop();
       if (!previousRecords) return;
       state.stopwatch.records = normalizeStopwatchRecords(previousRecords);
@@ -4931,6 +4942,33 @@
       stopwatchTimerInterval = null;
     }
 
+    function clearStopwatchUndoConfirmation(render = false) {
+      window.clearTimeout(stopwatchUndoConfirmationTimer);
+      stopwatchUndoConfirmationTimer = null;
+      stopwatchUndoConfirmationArmed = false;
+      if (render) renderStopwatchHistoryControls();
+    }
+
+    function armOrConfirmStopwatchUndo() {
+      if (stopwatchPlayUndo.disabled) return;
+      if (stopwatchUndoConfirmationArmed) {
+        clearStopwatchUndoConfirmation();
+        undoStopwatchChange();
+        return;
+      }
+
+      stopwatchUndoConfirmationArmed = true;
+      renderStopwatchHistoryControls();
+      statusbar.textContent = "tap undo again to confirm";
+      stopwatchUndoConfirmationTimer = window.setTimeout(() => {
+        if (!stopwatchUndoConfirmationArmed) return;
+        stopwatchUndoConfirmationTimer = null;
+        stopwatchUndoConfirmationArmed = false;
+        renderStopwatchHistoryControls();
+        statusbar.textContent = "undo confirmation canceled";
+      }, 3000);
+    }
+
     function clearStopwatchReviewConfirmation() {
       window.clearTimeout(stopwatchReviewConfirmationTimer);
       stopwatchReviewConfirmationTimer = null;
@@ -5010,6 +5048,7 @@
         statusbar.textContent = savedClass ? "add names to this class first" : "choose a saved class first";
         return;
       }
+      clearStopwatchUndoConfirmation();
       stopwatchPlaying = true;
       renderStopwatchRoster();
       openCounterDialog(stopwatchRosterDialog);
@@ -5020,6 +5059,7 @@
     function openStopwatchTimer(studentName) {
       if (!stopwatchPlaying || !studentName) return;
       clearStopwatchReviewConfirmation();
+      clearStopwatchUndoConfirmation();
       stopwatchSelectedStudent = studentName;
       stopwatchRunState = "ready";
       stopwatchElapsedMs = 0;
@@ -5096,6 +5136,7 @@
     function returnToStopwatchRoster() {
       if (stopwatchRunState === "running") return;
       clearStopwatchReviewConfirmation();
+      clearStopwatchUndoConfirmation();
       stopwatchSelectedStudent = "";
       stopwatchRunState = "ready";
       stopwatchElapsedMs = 0;
@@ -5115,6 +5156,7 @@
     function exitStopwatchPlay() {
       cancelStopwatchExitHold();
       clearStopwatchReviewConfirmation();
+      clearStopwatchUndoConfirmation();
       stopwatchPlaying = false;
       stopwatchSelectedStudent = "";
       stopwatchRunState = "ready";
@@ -5154,6 +5196,7 @@
     function setMode(mode) {
       if (bratKeyboardState) finishBratKeyboard(bratKeyboardState.isFormField ? "hide" : "cancel");
       cancelCounterClear(false);
+      streakCounter.cancelConfirmations();
       if (stopwatchPlaying && mode !== "stopwatch") exitStopwatchPlay();
       state.mode = mode;
       isMultipleEditing = mode === "multiple";
@@ -5747,7 +5790,7 @@
     chooseStopwatchClass.addEventListener("click", openStopwatchClassDialog);
     startStopwatchPlay.addEventListener("click", openStopwatchRoster);
     resetStopwatchTimes.addEventListener("click", () => openResetDialog("stopwatch"));
-    stopwatchPlayUndo.addEventListener("click", undoStopwatchChange);
+    stopwatchPlayUndo.addEventListener("click", armOrConfirmStopwatchUndo);
     cancelStopwatchClass.addEventListener("click", () => closeCounterDialog(stopwatchClassDialog));
     stopwatchStart.addEventListener("click", startStopwatchTimer);
     stopwatchStop.addEventListener("click", stopStopwatchTimer);
@@ -5909,6 +5952,8 @@
       let scoreResetArmed = false;
       let teamResetConfirmTimer = null;
       let teamResetArmed = false;
+      let streakActionConfirmationKey = null;
+      let streakActionConfirmationTimer = null;
       let undoStack = [];
       let redoStack = [];
       let isStreakEditing = true;
@@ -6074,7 +6119,50 @@
         return JSON.parse(JSON.stringify(streakState));
       }
 
+      function getStreakActionConfirmationKey(action, id = "") {
+        return action + ":" + id;
+      }
+
+      function isStreakActionConfirmationArmed(action, id = "") {
+        return streakActionConfirmationKey === getStreakActionConfirmationKey(action, id);
+      }
+
+      function clearStreakActionConfirmation() {
+        window.clearTimeout(streakActionConfirmationTimer);
+        streakActionConfirmationTimer = null;
+        streakActionConfirmationKey = null;
+      }
+
+      function clearAllStreakConfirmations(render = false) {
+        clearStreakActionConfirmation();
+        clearScoreResetConfirm(false);
+        clearTeamResetConfirm(false);
+        if (render) renderAll();
+      }
+
+      function armOrConfirmStreakAction(action, id, label, callback) {
+        const key = getStreakActionConfirmationKey(action, id);
+        if (streakActionConfirmationKey === key) {
+          clearAllStreakConfirmations();
+          callback();
+          return;
+        }
+
+        clearAllStreakConfirmations();
+        streakActionConfirmationKey = key;
+        renderAll();
+        statusText.textContent = "tap " + label + " again to confirm";
+        streakActionConfirmationTimer = window.setTimeout(() => {
+          if (streakActionConfirmationKey !== key) return;
+          streakActionConfirmationTimer = null;
+          streakActionConfirmationKey = null;
+          renderAll();
+          statusText.textContent = label + " confirmation canceled";
+        }, 3000);
+      }
+
       function rememberStreakState() {
+        clearAllStreakConfirmations();
         undoStack.push(cloneStreakState());
         if (undoStack.length > 30) undoStack.shift();
         redoStack = [];
@@ -6085,6 +6173,8 @@
         redoButton.disabled = redoStack.length === 0;
         undoButton.title = undoStack.length ? "undo last streak change" : "nothing to undo";
         redoButton.title = redoStack.length ? "redo last streak change" : "nothing to redo";
+        undoButton.textContent = isStreakActionConfirmationArmed("undo") ? "tap undo again" : "undo";
+        redoButton.textContent = isStreakActionConfirmationArmed("redo") ? "tap redo again" : "redo";
       }
 
       function restoreStreakHistory(snapshot, action) {
@@ -6096,6 +6186,7 @@
       }
 
       function undoStreakChange() {
+        clearAllStreakConfirmations();
         const previous = undoStack.pop();
         if (!previous) return;
         redoStack.push(cloneStreakState());
@@ -6103,6 +6194,7 @@
       }
 
       function redoStreakChange() {
+        clearAllStreakConfirmations();
         const next = redoStack.pop();
         if (!next) return;
         undoStack.push(cloneStreakState());
@@ -6138,6 +6230,7 @@
         teamTargetInput.value = streakState.teamTarget;
         teamStreakReadout.textContent = streakState.teamStreak + "/" + streakState.teamTarget;
         teamPointsReadout.textContent = streakState.teamPoints;
+        teamBreakButton.textContent = isStreakActionConfirmationArmed("team-break") ? "tap broke again" : "team broke";
         resetTeamButton.textContent = teamResetArmed ? "confirm reset" : "reset team";
         resetTeamButton.classList.toggle("streak-primary", teamResetArmed);
       }
@@ -6182,8 +6275,9 @@
       }
 
       function setStreakEditing(editing) {
+        clearAllStreakConfirmations();
         isStreakEditing = editing;
-        renderStudents();
+        renderAll();
         statusText.textContent = editing ? "editing streak students" : "streak counter view ready";
       }
 
@@ -6192,7 +6286,7 @@
         if (!student) return;
         rememberStreakState();
         student.hidden = hidden;
-        renderStudents();
+        renderAll();
         saveStreakState(student.name.toLowerCase() + (hidden ? " hidden" : " shown"));
       }
 
@@ -6288,7 +6382,7 @@
           pass.dataset.id = student.id;
           const broke = document.createElement("button");
           broke.type = "button";
-          broke.textContent = "broke";
+          broke.textContent = isStreakActionConfirmationArmed("break", student.id) ? "tap broke again" : "broke";
           broke.title = "break this student's streak";
           broke.dataset.action = "break";
           broke.dataset.id = student.id;
@@ -6408,46 +6502,46 @@
         oscillator.stop(now + 0.21);
       }
 
-      function clearTeamResetConfirm() {
+      function clearTeamResetConfirm(render = true) {
         teamResetArmed = false;
         if (teamResetConfirmTimer) {
           window.clearTimeout(teamResetConfirmTimer);
           teamResetConfirmTimer = null;
         }
-        renderTeamControls();
+        if (render) renderTeamControls();
       }
 
       function armTeamResetConfirm() {
+        clearAllStreakConfirmations();
         teamResetArmed = true;
-        renderTeamControls();
+        renderAll();
         statusText.textContent = "tap confirm reset";
-        if (teamResetConfirmTimer) window.clearTimeout(teamResetConfirmTimer);
         teamResetConfirmTimer = window.setTimeout(() => {
           teamResetConfirmTimer = null;
           teamResetArmed = false;
-          renderTeamControls();
+          renderAll();
           statusText.textContent = "reset canceled";
         }, 4000);
       }
 
-      function clearScoreResetConfirm() {
+      function clearScoreResetConfirm(render = true) {
         scoreResetArmed = false;
         if (scoreResetConfirmTimer) {
           window.clearTimeout(scoreResetConfirmTimer);
           scoreResetConfirmTimer = null;
         }
-        renderScoreResetControl();
+        if (render) renderScoreResetControl();
       }
 
       function armScoreResetConfirm() {
+        clearAllStreakConfirmations();
         scoreResetArmed = true;
-        renderScoreResetControl();
+        renderAll();
         statusText.textContent = "tap confirm reset";
-        if (scoreResetConfirmTimer) window.clearTimeout(scoreResetConfirmTimer);
         scoreResetConfirmTimer = window.setTimeout(() => {
           scoreResetConfirmTimer = null;
           scoreResetArmed = false;
-          renderScoreResetControl();
+          renderAll();
           statusText.textContent = "reset canceled";
         }, 4000);
       }
@@ -6478,7 +6572,7 @@
       }
 
       function breakTeam(source) {
-        clearTeamResetConfirm();
+        clearAllStreakConfirmations();
         rememberStreakState();
         streakState.teamEnabled = true;
         streakState.teamStreak = 0;
@@ -6492,7 +6586,7 @@
           armTeamResetConfirm();
           return;
         }
-        clearTeamResetConfirm();
+        clearAllStreakConfirmations();
         rememberStreakState();
         streakState.teamEnabled = true;
         streakState.teamStreak = 0;
@@ -6521,6 +6615,7 @@
       }
 
       function setScreen(screen) {
+        clearAllStreakConfirmations();
         streakState.screen = screen === "team" ? "team" : "points";
         streakState.mode = streakState.screen === "team" ? "team" : "individual";
         if (streakState.screen === "team") streakState.teamEnabled = true;
@@ -6629,7 +6724,7 @@
           armScoreResetConfirm();
           return;
         }
-        clearScoreResetConfirm();
+        clearAllStreakConfirmations();
         rememberStreakState();
         streakState.students.forEach((student) => {
           student.streak = 0;
@@ -6665,7 +6760,9 @@
           return;
         }
         if (button.dataset.action === "pass") passStudent(button.dataset.id);
-        if (button.dataset.action === "break") breakStudent(button.dataset.id);
+        if (button.dataset.action === "break") {
+          armOrConfirmStreakAction("break", button.dataset.id, "broke", () => breakStudent(button.dataset.id));
+        }
         if (button.dataset.action === "visibility") {
           const student = findStudent(button.dataset.id);
           if (student) setStudentHidden(student.id, !student.hidden);
@@ -6701,7 +6798,7 @@
       pointsScreenButton.addEventListener("click", () => setScreen("points"));
       teamScreenButton.addEventListener("click", () => setScreen("team"));
       teamPassButton.addEventListener("click", () => {
-        clearTeamResetConfirm();
+        clearAllStreakConfirmations();
         rememberStreakState();
         syncTeamTargetFromInput();
         streakState.teamEnabled = true;
@@ -6709,10 +6806,16 @@
         renderStats();
         saveStreakState(teamPoint ? "team got a point" : "team streak " + streakState.teamStreak + "/" + streakState.teamTarget);
       });
-      teamBreakButton.addEventListener("click", () => breakTeam("team"));
+      teamBreakButton.addEventListener("click", () => {
+        armOrConfirmStreakAction("team-break", "", "broke", () => breakTeam("team"));
+      });
       resetTeamButton.addEventListener("click", resetTeam);
-      undoButton.addEventListener("click", undoStreakChange);
-      redoButton.addEventListener("click", redoStreakChange);
+      undoButton.addEventListener("click", () => {
+        if (!undoButton.disabled) armOrConfirmStreakAction("undo", "", "undo", undoStreakChange);
+      });
+      redoButton.addEventListener("click", () => {
+        if (!redoButton.disabled) armOrConfirmStreakAction("redo", "", "redo", redoStreakChange);
+      });
       closeCelebrationButton.addEventListener("click", hideCelebration);
       streakCelebration.addEventListener("click", (event) => {
         if (event.target === streakCelebration) hideCelebration();
@@ -6752,11 +6855,17 @@
         },
         loadClass: loadStreakClass,
         unlinkClass(classId) {
-          if (streakState.activeClassId !== classId) return;
-          streakState.activeClassId = null;
-          saveStreakState();
+          const activeClassWasUnlinked = streakState.activeClassId === classId;
+          clearAllStreakConfirmations();
+          if (activeClassWasUnlinked) streakState.activeClassId = null;
+          renderAll();
+          if (activeClassWasUnlinked) saveStreakState();
+        },
+        cancelConfirmations(render = false) {
+          clearAllStreakConfirmations(render);
         },
         setEditing(editing) {
+          clearAllStreakConfirmations();
           isStreakEditing = Boolean(editing);
         },
         render: renderAll
