@@ -1141,7 +1141,8 @@
       text-transform: lowercase;
     }
 
-    .todo-mode-actions #listViewButton {
+    .multiple-controls .multiple-action.is-active,
+    .todo-mode-actions #listViewButton.is-active {
       color: var(--green);
       background: var(--black);
     }
@@ -6819,9 +6820,9 @@
       function renderStudents() {
         studentList.replaceChildren();
         const isPracticeView = state.mode === "streak" && !isStreakEditing && streakState.screen === "points";
-        const students = isStreakEditing
-          ? streakState.students
-          : streakState.students.filter((student) => !student.hidden);
+        const students = isPracticeView
+          ? streakState.students.filter((student) => !student.hidden)
+          : streakState.students;
         if (isPracticeView) {
           studentList.style.setProperty("--streak-practice-row-count", String(Math.max(1, Math.min(students.length, 9))));
         } else {
