@@ -290,6 +290,10 @@
       grid-column: 1 / -1;
     }
 
+    .stopwatch-actions .stopwatch-play {
+      grid-column: 1 / -1;
+    }
+
     .stopwatch-play {
       color: var(--green);
       background: var(--black);
@@ -586,36 +590,6 @@
       text-transform: lowercase;
     }
 
-    /* The streak counter keeps its score-only screen. Multiple mode instead
-       uses the compact active-practice screen below. */
-    #streakPanel.points-only,
-    #streakPanel.points-only #streakPointsScreenView {
-      gap: 0;
-    }
-
-    #streakPanel.points-only > :not(#streakPointsScreenView),
-    #streakPanel.points-only #streakPointsScreenView > :not(#streakStudentList) {
-      display: none !important;
-    }
-
-    #streakPanel.points-only .streak-student-list {
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 10px;
-    }
-
-    #streakPanel.points-only .streak-student-row {
-      display: block;
-      min-height: 0;
-      padding: 0;
-      border: 0;
-      background: transparent;
-    }
-
-    .streak-points-only-score {
-      min-height: min(46vh, 300px);
-      font-size: clamp(88px, 25vw, 190px);
-    }
-
     .multiple-practice-footer {
       display: none;
     }
@@ -704,17 +678,116 @@
       text-transform: lowercase;
     }
 
-    .streak-points-only-score {
+    .streak-practice-footer {
+      display: none;
+    }
+
+    /* Streak View is a kid-facing practice screen, just like Multiple View:
+       names, live progress, and only the actions needed during a turn. */
+    body.streak-practice-view .window {
+      height: calc(100dvh - 28px);
+      min-height: 0;
+      grid-template-rows: minmax(0, 1fr);
+    }
+
+    body.streak-practice-view .titlebar,
+    body.streak-practice-view .mode-menu,
+    body.streak-practice-view .statusbar {
+      display: none;
+    }
+
+    body.streak-practice-view .content {
+      min-height: 0;
+      padding: 8px;
+    }
+
+    #streakPanel.practice-view {
+      min-height: 0;
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 8px;
+    }
+
+    #streakPanel.practice-view > :not(#streakPointsScreenView):not(.streak-practice-footer) {
+      display: none !important;
+    }
+
+    #streakPanel.practice-view #streakPointsScreenView {
+      min-height: 0;
+    }
+
+    #streakPanel.practice-view #streakPointsScreenView > :not(#streakStudentList):not(#streakEmptyState) {
+      display: none !important;
+    }
+
+    #streakPanel.practice-view .streak-student-list {
+      min-height: 0;
+      grid-template-rows: repeat(var(--streak-practice-row-count, 1), minmax(58px, 1fr));
+      grid-auto-rows: minmax(58px, 1fr);
+      gap: 6px;
+      align-content: stretch;
+      overflow-y: auto;
+    }
+
+    #streakPanel.practice-view .streak-student-row {
+      grid-template-columns: minmax(0, 1fr) minmax(60px, 82px) minmax(52px, 70px) minmax(104px, 126px);
+      min-height: 0;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    #streakPanel.practice-view .streak-name-cell {
+      padding: 4px;
+      gap: 4px;
+    }
+
+    #streakPanel.practice-view .streak-student-name {
+      font-size: clamp(18px, 3.2vh, 28px);
+    }
+
+    #streakPanel.practice-view .streak-progress {
+      height: 9px;
+      border-width: 2px;
+    }
+
+    #streakPanel.practice-view .streak-practice-readout {
       display: grid;
-      place-items: center;
+      align-content: center;
+      gap: 2px;
       min-width: 0;
-      padding: 10px;
-      color: var(--green);
-      background: var(--black);
-      border: 4px solid var(--black);
+      padding: 3px;
+      border: 3px solid var(--black);
+      text-align: center;
+    }
+
+    #streakPanel.practice-view .streak-practice-value {
+      font-size: clamp(24px, 4.6vh, 38px);
       font-weight: 500;
       line-height: 0.9;
-      text-shadow: 0 0 2.4px currentColor;
+    }
+
+    #streakPanel.practice-view .streak-row-actions {
+      grid-column: auto;
+      gap: 4px;
+    }
+
+    #streakPanel.practice-view .streak-row-actions button {
+      min-height: 0;
+      padding: 2px;
+      font-size: clamp(13px, 2vh, 16px);
+      line-height: 0.95;
+    }
+
+    #streakPanel.practice-view .streak-practice-footer {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    #streakPanel.practice-view .streak-practice-footer button {
+      min-height: 52px;
+      padding: 4px 6px;
+      font-size: clamp(16px, 3vw, 24px);
+      text-transform: lowercase;
     }
 
     .list-toolbar {
@@ -2004,6 +2077,15 @@
         grid-column: 1 / -1;
       }
 
+      #streakPanel.practice-view .streak-student-row {
+        grid-template-columns: minmax(0, 1fr) minmax(54px, 64px) minmax(46px, 56px) minmax(104px, 116px);
+      }
+
+      #streakPanel.practice-view .streak-name-cell,
+      #streakPanel.practice-view .streak-row-actions {
+        grid-column: auto;
+      }
+
       .streak-actions {
         grid-template-columns: 1fr;
       }
@@ -2115,7 +2197,7 @@
               <button id="newClass" type="button">new</button>
               <button id="editClass" type="button">edit</button>
             </div>
-            <div class="class-roster-note">save each class once, then load every student's name with scores reset to zero.</div>
+            <div class="class-roster-note">make a class once, then use it in multiple, streak, or stopwatch.</div>
           </div>
         </div>
         <div class="multiple-settings">
@@ -2272,22 +2354,28 @@
           <button id="streakRedoButton" type="button" disabled>redo</button>
         </div>
 
+        <div id="streakPracticeFooter" class="streak-practice-footer" hidden>
+          <button id="streakPracticeResetScores" type="button">reset scores</button>
+          <button id="streakPracticeExit" type="button">exit view</button>
+        </div>
+
       </section>
 
       <section id="stopwatchPanel" class="panel stopwatch-panel" aria-label="Stopwatch">
         <div class="stopwatch-header">
           <h1 class="stopwatch-title">stopwatch</h1>
-          <p class="stopwatch-note">pick a saved class, then hand the screen to the kids.</p>
+          <p class="stopwatch-note">choose or create a saved class, then hand the screen to the kids.</p>
         </div>
+
+        <div id="stopwatchClassSlot" class="class-roster-slot"></div>
 
         <div class="stopwatch-setup">
           <div class="stopwatch-card">
-            <div class="dialog-label">class</div>
+            <div class="dialog-label">active class</div>
             <div id="stopwatchClassName" class="stopwatch-class-name">no class selected</div>
             <p id="stopwatchClassNote" class="stopwatch-note">choose a saved class to start.</p>
           </div>
           <div class="stopwatch-actions">
-            <button id="chooseStopwatchClass" type="button">choose class</button>
             <button id="startStopwatchPlay" class="stopwatch-play" type="button">play</button>
             <button id="resetStopwatchTimes" class="remove-action stopwatch-reset-times" type="button" disabled>reset times</button>
           </div>
@@ -2354,17 +2442,6 @@
       <div id="classPickerOptions" class="remove-options" aria-label="Saved classes"></div>
       <div class="dialog-actions">
         <button id="cancelClassPicker" type="button">cancel</button>
-      </div>
-    </div>
-  </dialog>
-
-  <dialog id="stopwatchClassDialog" class="counter-dialog" aria-labelledby="stopwatchClassDialogTitle">
-    <div class="dialog-content">
-      <h2 id="stopwatchClassDialogTitle" class="dialog-title">choose class</h2>
-      <p class="dialog-description">pick the class that will use the stopwatch.</p>
-      <div id="stopwatchClassOptions" class="remove-options" aria-label="Saved classes for stopwatch"></div>
-      <div class="dialog-actions">
-        <button id="cancelStopwatchClass" type="button">cancel</button>
       </div>
     </div>
   </dialog>
@@ -2588,6 +2665,7 @@
     const classRosterPanel = document.getElementById("classRosterPanel");
     const multipleClassSlot = document.getElementById("multipleClassSlot");
     const streakClassSlot = document.getElementById("streakClassSlot");
+    const stopwatchClassSlot = document.getElementById("stopwatchClassSlot");
     const classSelector = document.getElementById("classSelector");
     const classSelectorName = document.getElementById("classSelectorName");
     const classSelectorOpen = document.getElementById("classSelectorOpen");
@@ -2677,12 +2755,8 @@
     const statusbar = document.getElementById("statusbar");
     const stopwatchClassName = document.getElementById("stopwatchClassName");
     const stopwatchClassNote = document.getElementById("stopwatchClassNote");
-    const chooseStopwatchClass = document.getElementById("chooseStopwatchClass");
     const startStopwatchPlay = document.getElementById("startStopwatchPlay");
     const resetStopwatchTimes = document.getElementById("resetStopwatchTimes");
-    const stopwatchClassDialog = document.getElementById("stopwatchClassDialog");
-    const stopwatchClassOptions = document.getElementById("stopwatchClassOptions");
-    const cancelStopwatchClass = document.getElementById("cancelStopwatchClass");
     const stopwatchRosterDialog = document.getElementById("stopwatchRosterDialog");
     const stopwatchRosterDialogTitle = document.getElementById("stopwatchRosterDialogTitle");
     const stopwatchRosterNote = document.getElementById("stopwatchRosterNote");
@@ -2731,6 +2805,8 @@
     let removeConfirmationTimer = null;
     let armedCounterClearId = null;
     let counterClearTimer = null;
+    let singleClearArmed = false;
+    let singleClearTimer = null;
     let selectedClassEditId = null;
     let pendingResetKind = null;
     let resetConfirmStep = 1;
@@ -4110,7 +4186,11 @@
     }
 
     function renderMode() {
-      const classSlot = state.mode === "streak" ? streakClassSlot : multipleClassSlot;
+      const classSlot = state.mode === "streak"
+        ? streakClassSlot
+        : state.mode === "stopwatch"
+          ? stopwatchClassSlot
+          : multipleClassSlot;
       if (classRosterPanel.parentElement !== classSlot) classSlot.appendChild(classRosterPanel);
 
       modeButtons.forEach((button) => {
@@ -4131,6 +4211,10 @@
 
     function renderSingle() {
       countDisplay.textContent = state.single;
+      clearButton.textContent = singleClearArmed ? "tap clear again" : "clear";
+      clearButton.classList.toggle("armed", singleClearArmed);
+      clearButton.setAttribute("aria-pressed", String(singleClearArmed));
+      clearButton.setAttribute("aria-label", singleClearArmed ? "Tap clear again to reset the counter" : "Clear the counter");
     }
 
     function getCounterCard(id) {
@@ -4348,10 +4432,13 @@
 
     function renderClassRosterControls() {
       const selectedClass = getSelectedClass();
+      const isStopwatch = state.mode === "stopwatch";
       classSelectorName.textContent = selectedClass?.name || "no saved classes yet";
       classSelectorOpen.textContent = selectedClass ? "open" : "empty";
       classSelector.disabled = !state.classes.length;
       loadClass.disabled = !selectedClass;
+      loadClass.textContent = isStopwatch ? "use" : "load";
+      loadClass.setAttribute("aria-label", isStopwatch ? "Use selected class for stopwatch" : "Load selected class");
       editClass.disabled = !selectedClass;
     }
 
@@ -4402,7 +4489,9 @@
       className.value = "";
       const names = state.mode === "streak"
         ? streakCounter.getStudentNames()
-        : state.multiple.map((item) => item.name);
+        : state.mode === "multiple"
+          ? state.multiple.map((item) => item.name)
+          : [];
       classStudents.value = names.join("\n");
       openCounterDialog(classDialog);
       window.requestAnimationFrame(() => className.focus());
@@ -4469,6 +4558,7 @@
 
       streakCounter.cancelConfirmations(true);
       const existingClass = state.classes.find((savedClass) => savedClass.id === selectedClassEditId);
+      let savedClass = existingClass;
       if (existingClass) {
         existingClass.neededByStudent = normalizeNeededByStudent(existingClass.neededByStudent, students);
         existingClass.name = name;
@@ -4476,7 +4566,7 @@
         state.selectedClassId = existingClass.id;
       } else {
         const currentNeeded = state.mode === "streak" ? streakCounter.getNeededByStudent() : {};
-        const savedClass = {
+        savedClass = {
           id: makeId("class"),
           name,
           students,
@@ -4484,11 +4574,13 @@
         };
         state.classes.push(savedClass);
         state.selectedClassId = savedClass.id;
+        if (state.mode === "stopwatch") state.stopwatch.activeClassId = savedClass.id;
       }
 
       saveState();
       renderMultiple();
       streakCounter.render();
+      renderStopwatch();
       statusbar.textContent = name + " saved with " + students.length + " students";
       return true;
     }
@@ -4501,6 +4593,14 @@
       }
 
       streakCounter.cancelConfirmations(true);
+      if (state.mode === "stopwatch") {
+        state.stopwatch.activeClassId = savedClass.id;
+        saveState();
+        renderStopwatch();
+        statusbar.textContent = savedClass.name + " selected for stopwatch";
+        return;
+      }
+
       if (state.mode === "streak") {
         if (streakCounter.hasProgress() && !window.confirm("Load " + savedClass.name + " and reset the current streaks and points?")) return;
         streakCounter.loadClass(savedClass);
@@ -4531,6 +4631,7 @@
       unlinkStopwatchClass(savedClass.id);
       saveState();
       renderMultiple();
+      renderStopwatch();
       statusbar.textContent = savedClass.name + " deleted; current counters were not changed";
       return true;
     }
@@ -4890,7 +4991,7 @@
             stopwatchRoster.querySelector("button")?.focus();
             return;
           }
-          chooseStopwatchClass.focus();
+          startStopwatchPlay.focus();
         });
       }
     }
@@ -4926,34 +5027,6 @@
         .filter((entry) => entry.timeMs === null)
         .sort((left, right) => left.name.localeCompare(right.name));
       return timedEntries.concat(unrankedEntries);
-    }
-
-    function renderStopwatchClassOptions() {
-      stopwatchClassOptions.replaceChildren();
-      if (!state.classes.length) {
-        const empty = document.createElement("p");
-        empty.className = "dialog-description";
-        empty.textContent = "save a class in multiple first.";
-        stopwatchClassOptions.appendChild(empty);
-        return;
-      }
-
-      state.classes.forEach((savedClass) => {
-        const option = document.createElement("button");
-        const selected = savedClass.id === state.stopwatch.activeClassId;
-        option.type = "button";
-        option.className = "class-picker-option";
-        option.textContent = savedClass.name + " — " + savedClass.students.length + " kids";
-        option.setAttribute("aria-pressed", String(selected));
-        option.addEventListener("click", () => {
-          state.stopwatch.activeClassId = savedClass.id;
-          saveState();
-          renderStopwatch();
-          closeCounterDialog(stopwatchClassDialog);
-          statusbar.textContent = savedClass.name + " selected for stopwatch";
-        });
-        stopwatchClassOptions.appendChild(option);
-      });
     }
 
     function renderStopwatchRoster() {
@@ -5088,19 +5161,14 @@
       stopwatchClassNote.textContent = savedClass?.students.length
         ? savedClass.students.length + " kids ready for timed forward rolls."
         : savedClass
-          ? "add names to this class in multiple before using play mode."
-          : "save a class in multiple, then choose it here.";
+          ? "add names to this saved class above."
+          : "choose or create a saved class above.";
       startStopwatchPlay.disabled = !savedClass?.students.length;
       resetStopwatchTimes.disabled = !hasSavedTimes;
       renderStopwatchHistoryControls();
       if (didResetRecords) saveState();
       if (stopwatchRosterDialog.open) renderStopwatchRoster();
       if (stopwatchTimerDialog.open) renderStopwatchTimer();
-    }
-
-    function openStopwatchClassDialog() {
-      renderStopwatchClassOptions();
-      openCounterDialog(stopwatchClassDialog);
     }
 
     function openStopwatchRoster() {
@@ -5257,6 +5325,7 @@
     function setMode(mode) {
       if (bratKeyboardState) finishBratKeyboard(bratKeyboardState.isFormField ? "hide" : "cancel");
       cancelCounterClear(false);
+      clearSingleClearConfirmation(false);
       clearTodoActionConfirmation();
       streakCounter.cancelConfirmations();
       if (stopwatchPlaying && mode !== "stopwatch") exitStopwatchPlay();
@@ -5277,12 +5346,42 @@
     }
 
     function changeSingle(amount, kind) {
+      clearSingleClearConfirmation(false);
       state.single += amount;
       renderSingle();
       saveState();
       flash(countDisplay, kind);
       playSound(kind, state.single);
       statusbar.textContent = amount > 0 ? "point added" : "point removed";
+    }
+
+    function clearSingleClearConfirmation(render = true) {
+      singleClearArmed = false;
+      if (singleClearTimer) {
+        window.clearTimeout(singleClearTimer);
+        singleClearTimer = null;
+      }
+      if (render) renderSingle();
+    }
+
+    function armOrConfirmSingleClear() {
+      if (singleClearArmed) {
+        clearSingleClearConfirmation(false);
+        performSingleReset();
+        return;
+      }
+
+      clearSingleClearConfirmation(false);
+      singleClearArmed = true;
+      renderSingle();
+      statusbar.textContent = "tap clear again to confirm";
+      singleClearTimer = window.setTimeout(() => {
+        if (!singleClearArmed) return;
+        singleClearTimer = null;
+        singleClearArmed = false;
+        renderSingle();
+        statusbar.textContent = "clear confirmation canceled";
+      }, 3000);
     }
 
     function changeMultipleScore(id, amount, element) {
@@ -5514,6 +5613,7 @@
     }
 
     function performSingleReset() {
+      clearSingleClearConfirmation(false);
       state.single = 0;
       renderSingle();
       saveState();
@@ -5542,24 +5642,19 @@
       renderStopwatch();
       playSound("clear");
       statusbar.textContent = savedClass.name + " stopwatch times reset";
-      window.requestAnimationFrame(() => chooseStopwatchClass.focus());
+      window.requestAnimationFrame(() => startStopwatchPlay.focus());
     }
 
     function renderResetDialog() {
-      const isMultiple = pendingResetKind === "multiple";
       const isStopwatch = pendingResetKind === "stopwatch";
       const stopwatchClass = isStopwatch ? getStopwatchClass() : null;
       resetDialogTitle.textContent = isStopwatch
         ? "reset stopwatch times?"
-        : isMultiple
-          ? "reset all multiple scores?"
-          : "reset single counter?";
+        : "reset all multiple scores?";
       resetDialogDescription.textContent = resetConfirmStep === 1
         ? isStopwatch
           ? "this will clear every saved time for " + (stopwatchClass?.name || "this class") + ". continue to the final confirmation."
-          : isMultiple
-            ? "this will set every multiple score to zero. continue to the final confirmation."
-            : "this will set the single counter to zero. continue to the final confirmation."
+          : "this will set every multiple score to zero. continue to the final confirmation."
         : isStopwatch
           ? "last check: you can undo this stopwatch reset until you reload."
           : "last check: this reset cannot be undone.";
@@ -5586,7 +5681,6 @@
       const resetKind = pendingResetKind;
       closeCounterDialog(resetDialog);
       if (resetKind === "multiple") performMultipleReset();
-      if (resetKind === "single") performSingleReset();
       if (resetKind === "stopwatch") performStopwatchReset();
     }
 
@@ -5803,7 +5897,7 @@
     plusButton.addEventListener("click", () => changeSingle(1, "plus"));
     minusButton.addEventListener("click", () => changeSingle(-1, "minus"));
 
-    clearButton.addEventListener("click", () => openResetDialog("single"));
+    clearButton.addEventListener("click", armOrConfirmSingleClear);
     resetMultiple.addEventListener("click", () => openResetDialog("multiple"));
     addMultiple.addEventListener("click", openAddDialog);
     removeMultiple.addEventListener("click", openRemoveDialog);
@@ -5865,11 +5959,9 @@
       if (!todoRedoButton.disabled) armOrConfirmTodoAction("redo", "redo", redoTodoChange);
     });
     closeCelebration.addEventListener("click", hideTodoCelebration);
-    chooseStopwatchClass.addEventListener("click", openStopwatchClassDialog);
     startStopwatchPlay.addEventListener("click", openStopwatchRoster);
     resetStopwatchTimes.addEventListener("click", () => openResetDialog("stopwatch"));
     stopwatchPlayUndo.addEventListener("click", armOrConfirmStopwatchUndo);
-    cancelStopwatchClass.addEventListener("click", () => closeCounterDialog(stopwatchClassDialog));
     stopwatchStart.addEventListener("click", startStopwatchTimer);
     stopwatchStop.addEventListener("click", stopStopwatchTimer);
     stopwatchRedo.addEventListener("click", () => armOrConfirmStopwatchReviewAction("redo"));
@@ -5950,7 +6042,7 @@
     });
     cancelEditSkill.addEventListener("click", () => closeCounterDialog(editSkillDialog));
 
-    [addDialog, removeDialog, classDialog, classPickerDialog, stopwatchClassDialog, stopwatchRosterDialog, stopwatchTimerDialog, resetDialog, newListDialog, renameListDialog, deleteListDialog, addSkillDialog, editSkillDialog].forEach((dialog) => {
+    [addDialog, removeDialog, classDialog, classPickerDialog, stopwatchRosterDialog, stopwatchTimerDialog, resetDialog, newListDialog, renameListDialog, deleteListDialog, addSkillDialog, editSkillDialog].forEach((dialog) => {
       dialog.addEventListener("close", () => {
         if (bratKeyboardHost === dialog) finishBratKeyboard("cleanup");
         restoreDialogFocus(dialog);
@@ -6009,6 +6101,9 @@
       const resetTeamButton = document.getElementById("streakResetTeamButton");
       const undoButton = document.getElementById("streakUndoButton");
       const redoButton = document.getElementById("streakRedoButton");
+      const practiceFooter = document.getElementById("streakPracticeFooter");
+      const practiceResetScoresButton = document.getElementById("streakPracticeResetScores");
+      const practiceExitButton = document.getElementById("streakPracticeExit");
       const soundToggle = document.getElementById("streakSoundToggle");
       const studentList = document.getElementById("streakStudentList");
       const emptyState = document.getElementById("streakEmptyState");
@@ -6300,8 +6395,11 @@
       }
 
       function renderScoreResetControl() {
-        resetScoresButton.textContent = scoreResetArmed ? "confirm reset" : "reset scores";
+        const resetLabel = scoreResetArmed ? "confirm reset" : "reset scores";
+        resetScoresButton.textContent = resetLabel;
         resetScoresButton.classList.toggle("streak-primary", scoreResetArmed);
+        practiceResetScoresButton.textContent = resetLabel;
+        practiceResetScoresButton.classList.toggle("streak-primary", scoreResetArmed);
       }
 
       function renderTeamControls() {
@@ -6345,11 +6443,14 @@
       }
 
       function renderStreakViewMode() {
+        const isPracticeView = state.mode === "streak" && !isStreakEditing && streakState.screen === "points";
         viewButton.classList.toggle("is-active", !isStreakEditing);
         editButton.classList.toggle("is-active", isStreakEditing);
         viewButton.setAttribute("aria-pressed", String(!isStreakEditing));
         editButton.setAttribute("aria-pressed", String(isStreakEditing));
-        panel.classList.toggle("points-only", !isStreakEditing && streakState.screen === "points");
+        panel.classList.toggle("practice-view", isPracticeView);
+        document.body.classList.toggle("streak-practice-view", isPracticeView);
+        practiceFooter.hidden = !isPracticeView;
       }
 
       function setStreakEditing(editing) {
@@ -6408,11 +6509,60 @@
         return cell;
       }
 
+      function makePracticeReadout(labelText, value) {
+        const cell = document.createElement("div");
+        cell.className = "streak-practice-readout";
+        const label = document.createElement("div");
+        label.className = "streak-row-label";
+        label.textContent = labelText;
+        const readout = document.createElement("div");
+        readout.className = "streak-practice-value";
+        readout.textContent = value;
+        cell.append(label, readout);
+        return cell;
+      }
+
+      function makeStudentActions(student, includeVisibility) {
+        const actions = document.createElement("div");
+        actions.className = "streak-row-actions";
+        const pass = document.createElement("button");
+        pass.className = "streak-primary";
+        pass.type = "button";
+        pass.textContent = "pass";
+        pass.title = "add one passed rep";
+        pass.dataset.action = "pass";
+        pass.dataset.id = student.id;
+        const broke = document.createElement("button");
+        broke.type = "button";
+        const breakArmed = isStreakActionConfirmationArmed("break", student.id);
+        broke.textContent = breakArmed ? (includeVisibility ? "tap broke again" : "confirm") : "broke";
+        broke.title = "break this student's streak";
+        broke.dataset.action = "break";
+        broke.dataset.id = student.id;
+        actions.append(pass, broke);
+        if (includeVisibility) {
+          const visibility = document.createElement("button");
+          visibility.type = "button";
+          visibility.textContent = student.hidden ? "show" : "hide";
+          visibility.dataset.action = "visibility";
+          visibility.dataset.id = student.id;
+          visibility.setAttribute("aria-label", (student.hidden ? "Show " : "Hide ") + student.name);
+          actions.appendChild(visibility);
+        }
+        return actions;
+      }
+
       function renderStudents() {
         studentList.replaceChildren();
+        const isPracticeView = state.mode === "streak" && !isStreakEditing && streakState.screen === "points";
         const students = isStreakEditing
           ? streakState.students
           : streakState.students.filter((student) => !student.hidden);
+        if (isPracticeView) {
+          studentList.style.setProperty("--streak-practice-row-count", String(Math.max(1, Math.min(students.length, 9))));
+        } else {
+          studentList.style.removeProperty("--streak-practice-row-count");
+        }
         emptyState.hidden = Boolean(students.length);
         emptyState.textContent = streakState.students.length ? "all kids hidden — edit to show one" : "no names yet";
         renderStreakViewMode();
@@ -6421,16 +6571,6 @@
           const row = document.createElement("article");
           row.className = "streak-student-row";
           row.dataset.id = student.id;
-
-          if (!isStreakEditing) {
-            row.setAttribute("aria-label", student.name + ": " + student.points + " points");
-            const score = document.createElement("div");
-            score.className = "streak-points-only-score";
-            score.textContent = student.points;
-            row.appendChild(score);
-            studentList.appendChild(row);
-            return;
-          }
 
           const nameCell = document.createElement("div");
           nameCell.className = "streak-name-cell";
@@ -6445,37 +6585,24 @@
           progress.appendChild(fill);
           nameCell.append(name, progress);
 
+          if (isPracticeView) {
+            row.classList.add("streak-practice-row");
+            row.setAttribute("aria-label", student.name + ": streak " + student.streak + "/" + student.target + ", " + student.points + " points");
+            row.append(
+              nameCell,
+              makePracticeReadout("streak", student.streak + "/" + student.target),
+              makePracticeReadout("points", student.points),
+              makeStudentActions(student, false)
+            );
+            studentList.appendChild(row);
+            return;
+          }
+
           const streakCell = makeNumberCell("streak", student.streak, "streak", student.id, 0, 999);
           const targetCell = makeNumberCell("needed", student.target, "target", student.id, 1, 99);
           const pointsCell = makeNumberCell("points", student.points, "points", student.id, 0, 999);
 
-          const actions = document.createElement("div");
-          actions.className = "streak-row-actions";
-          const pass = document.createElement("button");
-          pass.className = "streak-primary";
-          pass.type = "button";
-          pass.textContent = "pass";
-          pass.title = "add one passed rep";
-          pass.dataset.action = "pass";
-          pass.dataset.id = student.id;
-          const broke = document.createElement("button");
-          broke.type = "button";
-          broke.textContent = isStreakActionConfirmationArmed("break", student.id) ? "tap broke again" : "broke";
-          broke.title = "break this student's streak";
-          broke.dataset.action = "break";
-          broke.dataset.id = student.id;
-          actions.append(pass, broke);
-          if (isStreakEditing) {
-            const visibility = document.createElement("button");
-            visibility.type = "button";
-            visibility.textContent = student.hidden ? "show" : "hide";
-            visibility.dataset.action = "visibility";
-            visibility.dataset.id = student.id;
-            visibility.setAttribute("aria-label", (student.hidden ? "Show " : "Hide ") + student.name);
-            actions.appendChild(visibility);
-          }
-
-          row.append(nameCell, streakCell, targetCell, pointsCell, actions);
+          row.append(nameCell, streakCell, targetCell, pointsCell, makeStudentActions(student, true));
           studentList.appendChild(row);
         });
       }
@@ -6870,9 +6997,11 @@
       });
 
       resetScoresButton.addEventListener("click", resetScores);
+      practiceResetScoresButton.addEventListener("click", resetScores);
       copySummaryButton.addEventListener("click", copySummary);
       viewButton.addEventListener("click", () => setStreakEditing(false));
       editButton.addEventListener("click", () => setStreakEditing(true));
+      practiceExitButton.addEventListener("click", () => setStreakEditing(true));
       pointsScreenButton.addEventListener("click", () => setScreen("points"));
       teamScreenButton.addEventListener("click", () => setScreen("team"));
       teamPassButton.addEventListener("click", () => {
@@ -6909,7 +7038,7 @@
           control === teamBreakButton ||
           control === undoButton ||
           control === redoButton ||
-          (control === resetScoresButton && scoreResetArmed) ||
+          ((control === resetScoresButton || control === practiceResetScoresButton) && scoreResetArmed) ||
           (control === resetTeamButton && teamResetArmed);
         if (!usesActionSound) playUiTapSound();
       }, true);
