@@ -284,6 +284,7 @@
     .stopwatch-actions button,
     .stopwatch-timer-actions button,
     .stopwatch-history-actions button,
+    .stopwatch-play-undo,
     .stopwatch-hold-exit {
       min-height: 62px;
       font-size: clamp(22px, 5vw, 32px);
@@ -367,6 +368,13 @@
     .stopwatch-timer-readout.running {
       color: var(--black);
       background: var(--green);
+    }
+
+    .stopwatch-play-undo,
+    .stopwatch-hold-exit {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
 
     .stopwatch-hold-exit {
@@ -2370,6 +2378,7 @@
       <h2 id="stopwatchRosterDialogTitle" class="dialog-title">stopwatch</h2>
       <p id="stopwatchRosterNote" class="stopwatch-roster-note">pick whose turn it is.</p>
       <div id="stopwatchRoster" class="stopwatch-roster" aria-live="polite"></div>
+      <button id="stopwatchPlayUndo" class="stopwatch-play-undo" type="button" disabled>undo</button>
       <button id="stopwatchHoldExit" class="stopwatch-hold-exit" type="button">hold to exit play mode</button>
     </div>
   </dialog>
@@ -2683,6 +2692,7 @@
     const stopwatchRosterDialogTitle = document.getElementById("stopwatchRosterDialogTitle");
     const stopwatchRosterNote = document.getElementById("stopwatchRosterNote");
     const stopwatchRoster = document.getElementById("stopwatchRoster");
+    const stopwatchPlayUndo = document.getElementById("stopwatchPlayUndo");
     const stopwatchHoldExit = document.getElementById("stopwatchHoldExit");
     const stopwatchTimerDialog = document.getElementById("stopwatchTimerDialog");
     const stopwatchTimerDialogTitle = document.getElementById("stopwatchTimerDialogTitle");
@@ -4796,8 +4806,11 @@
     }
 
     function renderStopwatchHistoryControls() {
-      stopwatchUndoButton.disabled = stopwatchUndoStack.length === 0;
-      stopwatchUndoButton.title = stopwatchUndoStack.length ? "undo last stopwatch change" : "nothing to undo";
+      const hasUndo = stopwatchUndoStack.length > 0;
+      [stopwatchUndoButton, stopwatchPlayUndo].forEach((button) => {
+        button.disabled = !hasUndo;
+        button.title = hasUndo ? "undo last stopwatch change" : "nothing to undo";
+      });
     }
 
     function undoStopwatchChange() {
@@ -4809,7 +4822,13 @@
       playSound("clear");
       statusbar.textContent = "undid last stopwatch change";
       if (stopwatchUndoButton.disabled) {
-        window.requestAnimationFrame(() => chooseStopwatchClass.focus());
+        window.requestAnimationFrame(() => {
+          if (stopwatchRosterDialog.open) {
+            stopwatchRoster.querySelector("button")?.focus();
+            return;
+          }
+          chooseStopwatchClass.focus();
+        });
       }
     }
 
@@ -5701,6 +5720,7 @@
     startStopwatchPlay.addEventListener("click", openStopwatchRoster);
     resetStopwatchTimes.addEventListener("click", () => openResetDialog("stopwatch"));
     stopwatchUndoButton.addEventListener("click", undoStopwatchChange);
+    stopwatchPlayUndo.addEventListener("click", undoStopwatchChange);
     cancelStopwatchClass.addEventListener("click", () => closeCounterDialog(stopwatchClassDialog));
     stopwatchStart.addEventListener("click", startStopwatchTimer);
     stopwatchStop.addEventListener("click", stopStopwatchTimer);
