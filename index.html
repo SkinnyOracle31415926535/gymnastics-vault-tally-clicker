@@ -273,8 +273,17 @@
       gap: 10px;
     }
 
+    .stopwatch-history-actions {
+      display: grid;
+    }
+
+    .stopwatch-timer-actions[hidden] {
+      display: none;
+    }
+
     .stopwatch-actions button,
     .stopwatch-timer-actions button,
+    .stopwatch-history-actions button,
     .stopwatch-hold-exit {
       min-height: 62px;
       font-size: clamp(22px, 5vw, 32px);
@@ -2276,6 +2285,9 @@
             <button id="resetStopwatchTimes" class="remove-action stopwatch-reset-times" type="button" disabled>reset times</button>
           </div>
         </div>
+        <div class="stopwatch-history-actions" aria-label="Stopwatch history">
+          <button id="stopwatchUndoButton" type="button" disabled>undo</button>
+        </div>
       </section>
     </section>
 
@@ -2663,6 +2675,7 @@
     const chooseStopwatchClass = document.getElementById("chooseStopwatchClass");
     const startStopwatchPlay = document.getElementById("startStopwatchPlay");
     const resetStopwatchTimes = document.getElementById("resetStopwatchTimes");
+    const stopwatchUndoButton = document.getElementById("stopwatchUndoButton");
     const stopwatchClassDialog = document.getElementById("stopwatchClassDialog");
     const stopwatchClassOptions = document.getElementById("stopwatchClassOptions");
     const cancelStopwatchClass = document.getElementById("cancelStopwatchClass");
@@ -2704,6 +2717,7 @@
     };
     let todoUndoStack = [];
     let todoRedoStack = [];
+    let stopwatchUndoStack = [];
     let audioContext = null;
     let selectedRemovalIds = new Set();
     let removeConfirmationArmed = false;
@@ -4772,6 +4786,33 @@
       return state.stopwatch.records[classId];
     }
 
+    function cloneStopwatchRecords() {
+      return JSON.parse(JSON.stringify(state.stopwatch.records));
+    }
+
+    function rememberStopwatchState() {
+      stopwatchUndoStack.push(cloneStopwatchRecords());
+      if (stopwatchUndoStack.length > 30) stopwatchUndoStack.shift();
+    }
+
+    function renderStopwatchHistoryControls() {
+      stopwatchUndoButton.disabled = stopwatchUndoStack.length === 0;
+      stopwatchUndoButton.title = stopwatchUndoStack.length ? "undo last stopwatch change" : "nothing to undo";
+    }
+
+    function undoStopwatchChange() {
+      const previousRecords = stopwatchUndoStack.pop();
+      if (!previousRecords) return;
+      state.stopwatch.records = normalizeStopwatchRecords(previousRecords);
+      saveState();
+      renderStopwatch();
+      playSound("clear");
+      statusbar.textContent = "undid last stopwatch change";
+      if (stopwatchUndoButton.disabled) {
+        window.requestAnimationFrame(() => chooseStopwatchClass.focus());
+      }
+    }
+
     function formatStopwatchTime(timeMs) {
       const totalCentiseconds = Math.max(0, Math.round(Number(timeMs) / 10));
       const minutes = Math.floor(totalCentiseconds / 6000);
@@ -4912,6 +4953,7 @@
           : "save a class in multiple, then choose it here.";
       startStopwatchPlay.disabled = !savedClass?.students.length;
       resetStopwatchTimes.disabled = !hasSavedTimes;
+      renderStopwatchHistoryControls();
       if (didResetRecords) saveState();
       if (stopwatchRosterDialog.open) renderStopwatchRoster();
       if (stopwatchTimerDialog.open) renderStopwatchTimer();
@@ -4989,8 +5031,12 @@
       const key = normalizeMultipleName(stopwatchSelectedStudent);
       const previous = records[key];
       const isNewRecord = !previous || elapsed < previous;
-      if (isNewRecord) records[key] = elapsed;
+      if (isNewRecord) {
+        rememberStopwatchState();
+        records[key] = elapsed;
+      }
       saveState();
+      renderStopwatchHistoryControls();
       playSound(isNewRecord ? "todo" : "plus");
       statusbar.textContent = isNewRecord
         ? stopwatchSelectedStudent + " new best: " + formatStopwatchTime(elapsed)
@@ -5338,6 +5384,7 @@
     function performStopwatchReset() {
       const savedClass = getStopwatchClass();
       if (!savedClass || !state.stopwatch.records[savedClass.id]) return;
+      rememberStopwatchState();
       delete state.stopwatch.records[savedClass.id];
       saveState();
       renderStopwatch();
@@ -5361,7 +5408,9 @@
           : isMultiple
             ? "this will set every multiple score to zero. continue to the final confirmation."
             : "this will set the single counter to zero. continue to the final confirmation."
-        : "last check: this reset cannot be undone.";
+        : isStopwatch
+          ? "last check: you can undo this stopwatch reset until you reload."
+          : "last check: this reset cannot be undone.";
       resetStepOne.classList.toggle("active", resetConfirmStep === 1);
       resetStepTwo.classList.toggle("active", resetConfirmStep === 2);
       confirmReset.textContent = resetConfirmStep === 1 ? "continue" : "yes, reset";
@@ -5651,6 +5700,7 @@
     chooseStopwatchClass.addEventListener("click", openStopwatchClassDialog);
     startStopwatchPlay.addEventListener("click", openStopwatchRoster);
     resetStopwatchTimes.addEventListener("click", () => openResetDialog("stopwatch"));
+    stopwatchUndoButton.addEventListener("click", undoStopwatchChange);
     cancelStopwatchClass.addEventListener("click", () => closeCounterDialog(stopwatchClassDialog));
     stopwatchStart.addEventListener("click", startStopwatchTimer);
     stopwatchStop.addEventListener("click", stopStopwatchTimer);
