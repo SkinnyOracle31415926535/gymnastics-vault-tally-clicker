@@ -277,6 +277,10 @@
       display: none;
     }
 
+    .stopwatch-timer-actions .full-row {
+      grid-column: 1 / -1;
+    }
+
     .stopwatch-actions button,
     .stopwatch-timer-actions button,
     .stopwatch-play-undo,
@@ -299,8 +303,39 @@
       background: var(--black);
     }
 
-    .stopwatch-roster-dialog {
-      width: min(720px, calc(100% - 24px));
+    .counter-dialog.stopwatch-play-dialog {
+      inset: 0;
+      width: 100dvw;
+      max-width: none;
+      height: 100dvh;
+      max-height: none;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      border: 0;
+    }
+
+    .counter-dialog.stopwatch-play-dialog > .dialog-content {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      padding:
+        max(12px, env(safe-area-inset-top))
+        max(12px, env(safe-area-inset-right))
+        max(12px, env(safe-area-inset-bottom))
+        max(12px, env(safe-area-inset-left));
+    }
+
+    .stopwatch-roster-content,
+    .counter-dialog.stopwatch-play-dialog > .stopwatch-timer {
+      grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+    }
+
+    .stopwatch-roster-content .stopwatch-roster {
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      align-content: start;
     }
 
     .stopwatch-roster-row {
@@ -316,6 +351,16 @@
       border: 4px solid var(--black);
       text-align: left;
       text-transform: lowercase;
+    }
+
+    .stopwatch-roster-row.is-untimed {
+      grid-template-columns: minmax(0, 1fr) auto;
+      min-height: 48px;
+      padding: 6px 10px;
+    }
+
+    .stopwatch-roster-row.is-untimed .stopwatch-record {
+      font-size: clamp(16px, 4vw, 22px);
     }
 
     .stopwatch-roster-row:hover,
@@ -347,7 +392,7 @@
       background: var(--black);
     }
 
-    .stopwatch-record.empty {
+    .stopwatch-record.untimed {
       opacity: 0.7;
     }
 
@@ -2673,8 +2718,8 @@
     </div>
   </dialog>
 
-  <dialog id="stopwatchRosterDialog" class="counter-dialog stopwatch-roster-dialog" aria-labelledby="stopwatchRosterDialogTitle">
-    <div class="dialog-content">
+  <dialog id="stopwatchRosterDialog" class="counter-dialog stopwatch-play-dialog" aria-labelledby="stopwatchRosterDialogTitle">
+    <div class="dialog-content stopwatch-roster-content">
       <h2 id="stopwatchRosterDialogTitle" class="dialog-title">stopwatch</h2>
       <p id="stopwatchRosterNote" class="stopwatch-roster-note">pick whose turn it is.</p>
       <div id="stopwatchRoster" class="stopwatch-roster" aria-live="polite"></div>
@@ -2683,20 +2728,23 @@
     </div>
   </dialog>
 
-  <dialog id="stopwatchTimerDialog" class="counter-dialog" aria-labelledby="stopwatchTimerDialogTitle">
+  <dialog id="stopwatchTimerDialog" class="counter-dialog stopwatch-play-dialog" aria-labelledby="stopwatchTimerDialogTitle">
     <div class="dialog-content stopwatch-timer">
       <h2 id="stopwatchTimerDialogTitle" class="dialog-title">ready?</h2>
       <p id="stopwatchTimerNote" class="dialog-description">tap start when the gymnast is ready.</p>
       <div id="stopwatchTimerReadout" class="stopwatch-timer-readout" aria-live="polite">0:00.00</div>
       <div id="stopwatchRunActions" class="stopwatch-timer-actions">
-        <button id="stopwatchStart" class="stopwatch-play" type="button">start</button>
+        <button id="stopwatchStart" class="stopwatch-play full-row" type="button">start</button>
         <button id="stopwatchStop" class="remove-confirm" type="button" hidden>stop</button>
       </div>
       <div id="stopwatchReviewActions" class="stopwatch-timer-actions" hidden>
-        <button id="stopwatchRedo" type="button">redo</button>
+        <button id="stopwatchResume" class="stopwatch-play" type="button">resume</button>
         <button id="stopwatchSubmit" class="stopwatch-play" type="button">submit</button>
       </div>
-      <button id="stopwatchTimerBack" type="button">back</button>
+      <div class="stopwatch-timer-actions">
+        <button id="stopwatchRedo" type="button" hidden>redo</button>
+        <button id="stopwatchTimerBack" class="full-row" type="button">back</button>
+      </div>
     </div>
   </dialog>
 
@@ -3001,6 +3049,7 @@
     const stopwatchReviewActions = document.getElementById("stopwatchReviewActions");
     const stopwatchStart = document.getElementById("stopwatchStart");
     const stopwatchStop = document.getElementById("stopwatchStop");
+    const stopwatchResume = document.getElementById("stopwatchResume");
     const stopwatchRedo = document.getElementById("stopwatchRedo");
     const stopwatchSubmit = document.getElementById("stopwatchSubmit");
     const stopwatchTimerBack = document.getElementById("stopwatchTimerBack");
@@ -4243,7 +4292,8 @@
     }
 
     function playIncrementDing(context, now, score) {
-      const step = Math.min(19, Math.max(score, 1) - 1);
+      const safeScore = Number.isFinite(score) ? score : 1;
+      const step = Math.min(19, Math.max(safeScore, 1) - 1);
       const baseFrequency = 520;
       const frequency = baseFrequency * Math.pow(2, step / 12);
       const overtoneFrequency = frequency * 2.01;
@@ -5309,15 +5359,17 @@
         const name = document.createElement("span");
         const rank = document.createElement("span");
         const record = document.createElement("span");
+        const isUntimed = entry.timeMs === null;
         row.type = "button";
-        row.className = "stopwatch-roster-row";
+        row.className = "stopwatch-roster-row" + (isUntimed ? " is-untimed" : "");
         name.className = "stopwatch-student-name";
         rank.className = "stopwatch-rank";
-        record.className = "stopwatch-record" + (entry.timeMs === null ? " empty" : "");
+        record.className = "stopwatch-record" + (isUntimed ? " untimed" : "");
         name.textContent = entry.name;
         rank.textContent = entry.rank ? "#" + entry.rank : "--";
-        record.textContent = entry.timeMs === null ? "no time" : formatStopwatchTime(entry.timeMs);
-        row.setAttribute("aria-label", entry.name + (entry.timeMs === null ? ", no time yet" : ", rank " + entry.rank + ", " + formatStopwatchTime(entry.timeMs)));
+        rank.hidden = isUntimed;
+        record.textContent = isUntimed ? "no time" : formatStopwatchTime(entry.timeMs);
+        row.setAttribute("aria-label", entry.name + (isUntimed ? ", no time yet" : ", rank " + entry.rank + ", " + formatStopwatchTime(entry.timeMs)));
         row.append(name, rank, record);
         row.addEventListener("click", () => openStopwatchTimer(entry.name));
         stopwatchRoster.appendChild(row);
@@ -5393,19 +5445,24 @@
     function renderStopwatchTimer() {
       const isRunning = stopwatchRunState === "running";
       const isReviewing = stopwatchRunState === "stopped";
+      const isReady = stopwatchRunState === "ready";
       const elapsed = getStopwatchElapsedMs();
       stopwatchTimerDialogTitle.textContent = stopwatchSelectedStudent || "ready?";
       stopwatchTimerNote.textContent = isRunning
         ? "timing " + stopwatchSelectedStudent + "."
         : isReviewing
-          ? "keep this time or redo it."
+          ? "resume, submit, or redo this time."
           : "tap start when the gymnast is ready.";
       stopwatchTimerReadout.textContent = formatStopwatchTime(elapsed);
       stopwatchTimerReadout.classList.toggle("running", isRunning);
       stopwatchRunActions.hidden = isReviewing;
       stopwatchReviewActions.hidden = !isReviewing;
-      stopwatchStart.hidden = isRunning || isReviewing;
+      stopwatchStart.hidden = !isReady;
       stopwatchStop.hidden = !isRunning;
+      stopwatchRedo.hidden = !isReviewing;
+      stopwatchStart.classList.toggle("full-row", isReady);
+      stopwatchStop.classList.toggle("full-row", isRunning);
+      stopwatchTimerBack.classList.toggle("full-row", !isReviewing);
       stopwatchTimerBack.disabled = isRunning;
       stopwatchRedo.textContent = stopwatchReviewConfirmationAction === "redo" ? "tap redo again" : "redo";
       stopwatchSubmit.textContent = stopwatchReviewConfirmationAction === "submit" ? "tap submit again" : "submit";
@@ -5480,7 +5537,20 @@
       stopwatchRunState = "stopped";
       renderStopwatchTimer();
       playSound("goal");
-      statusbar.textContent = formatStopwatchTime(stopwatchElapsedMs) + " ready to submit or redo";
+      statusbar.textContent = formatStopwatchTime(stopwatchElapsedMs) + " ready to resume, submit, or redo";
+    }
+
+    function resumeStopwatchTimer() {
+      if (stopwatchRunState !== "stopped") return;
+      clearStopwatchReviewConfirmation();
+      stopwatchRunState = "running";
+      stopwatchStartedAt = performance.now() - stopwatchElapsedMs;
+      clearStopwatchTimer();
+      stopwatchTimerInterval = window.setInterval(renderStopwatchTimer, 40);
+      renderStopwatchTimer();
+      playSound("plus");
+      statusbar.textContent = "resumed " + stopwatchSelectedStudent;
+      window.requestAnimationFrame(() => stopwatchStop.focus());
     }
 
     function redoStopwatchTimer() {
@@ -6229,6 +6299,7 @@
     stopwatchPlayUndo.addEventListener("click", armOrConfirmStopwatchUndo);
     stopwatchStart.addEventListener("click", startStopwatchTimer);
     stopwatchStop.addEventListener("click", stopStopwatchTimer);
+    stopwatchResume.addEventListener("click", resumeStopwatchTimer);
     stopwatchRedo.addEventListener("click", () => armOrConfirmStopwatchReviewAction("redo"));
     stopwatchSubmit.addEventListener("click", () => armOrConfirmStopwatchReviewAction("submit"));
     stopwatchTimerBack.addEventListener("click", returnToStopwatchRoster);
