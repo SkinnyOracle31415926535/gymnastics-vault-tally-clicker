@@ -1030,6 +1030,7 @@
 
     .list-table-wrap {
       overflow-x: auto;
+      overflow-y: hidden;
       border: 4px solid var(--black);
     }
 
@@ -1127,6 +1128,24 @@
       gap: 8px;
     }
 
+    .todo-mode-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .todo-mode-actions > button {
+      min-height: 60px;
+      padding: 8px 12px;
+      font-size: 24px;
+      text-transform: lowercase;
+    }
+
+    .todo-mode-actions #listViewButton {
+      color: var(--green);
+      background: var(--black);
+    }
+
     #listPanel.is-editing .todo-run-only {
       display: none;
     }
@@ -1151,10 +1170,9 @@
     }
 
     .todo-history-actions {
-      display: flex;
-      justify-content: flex-end;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 6px;
-      margin-top: 18px;
       opacity: 0.72;
     }
 
@@ -1170,6 +1188,119 @@
 
     .list-controls .clear {
       grid-column: 1 / -1;
+    }
+
+    .todo-practice-footer {
+      display: none;
+    }
+
+    /* TODO View is the kid-facing run screen: work the current skill, then
+       scroll the skill list without exposing setup controls. */
+    body.todo-practice-view .window {
+      height: calc(100dvh - 28px);
+      min-height: 0;
+      grid-template-rows: minmax(0, 1fr);
+    }
+
+    body.todo-practice-view .titlebar,
+    body.todo-practice-view .mode-menu,
+    body.todo-practice-view .statusbar {
+      display: none;
+    }
+
+    body.todo-practice-view .content {
+      min-height: 0;
+      padding: 8px;
+    }
+
+    #listPanel.is-viewing {
+      min-height: 0;
+      overflow: hidden;
+      grid-template-rows: auto auto minmax(110px, 1fr) auto minmax(92px, 1.3fr) auto;
+      gap: 8px;
+    }
+
+    #listPanel.is-viewing > :not(.todo-run-only):not(.list-table-wrap):not(.todo-practice-footer) {
+      display: none !important;
+    }
+
+    #listPanel.is-viewing .run-current-skill {
+      order: 1;
+      padding: 7px;
+    }
+
+    #listPanel.is-viewing .run-current-name {
+      font-size: clamp(20px, 4.5vh, 36px);
+    }
+
+    #listPanel.is-viewing .run-summary {
+      order: 2;
+      gap: 5px;
+      padding: 7px;
+    }
+
+    #listPanel.is-viewing .run-summary-line {
+      font-size: clamp(18px, 3.6vh, 30px);
+    }
+
+    #listPanel.is-viewing .progress-track {
+      height: 18px;
+      border-width: 3px;
+    }
+
+    #listPanel.is-viewing .current-skill {
+      order: 3;
+      min-height: 110px;
+      padding: 6px;
+    }
+
+    #listPanel.is-viewing .current-skill-count {
+      font-size: clamp(62px, 16vh, 124px);
+    }
+
+    #listPanel.is-viewing .current-skill-target {
+      right: 10px;
+      bottom: 8px;
+      font-size: clamp(24px, 5vh, 42px);
+    }
+
+    #listPanel.is-viewing #listSuccess {
+      display: none !important;
+    }
+
+    #listPanel.is-viewing .list-controls {
+      order: 4;
+      gap: 6px;
+    }
+
+    #listPanel.is-viewing .list-controls .plus,
+    #listPanel.is-viewing .list-controls .minus {
+      min-height: 58px;
+      font-size: clamp(32px, 7vh, 52px);
+    }
+
+    #listPanel.is-viewing .list-controls .clear {
+      min-height: 52px;
+      font-size: clamp(18px, 3.5vh, 28px);
+    }
+
+    #listPanel.is-viewing .list-table-wrap {
+      order: 5;
+      min-height: 0;
+      overflow: auto;
+      overscroll-behavior: contain;
+    }
+
+    #listPanel.is-viewing .todo-practice-footer {
+      order: 6;
+      display: grid;
+    }
+
+    #listPanel.is-viewing .todo-practice-footer button {
+      min-height: 52px;
+      padding: 4px 6px;
+      font-size: clamp(16px, 3vw, 24px);
+      text-transform: lowercase;
     }
 
     .list-empty {
@@ -2038,6 +2169,21 @@
         grid-template-columns: 1fr;
       }
 
+      /* Keep the requested TODO control pairs beside each other on phones. */
+      #listPanel .list-actions,
+      #listPanel .todo-mode-actions,
+      #listPanel.is-viewing .list-controls {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      #listPanel.is-viewing .list-controls .clear {
+        grid-column: 1 / -1;
+      }
+
+      body.todo-practice-view .window {
+        height: calc(100dvh - 12px);
+      }
+
       .multiple-controls {
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
@@ -2118,6 +2264,75 @@
       #bratKeyboardEnter {
         flex-grow: 1.7;
         font-size: 14px;
+      }
+    }
+
+    @media (max-height: 640px) {
+      body.todo-practice-view .content {
+        padding: 4px;
+      }
+
+      #listPanel.is-viewing {
+        grid-template-rows: auto auto minmax(50px, 1fr) auto minmax(58px, 0.9fr) auto;
+        gap: 4px;
+      }
+
+      #listPanel.is-viewing .run-current-skill {
+        gap: 1px;
+        padding: 4px;
+      }
+
+      #listPanel.is-viewing .run-current-label {
+        font-size: 12px;
+      }
+
+      #listPanel.is-viewing .run-current-name {
+        font-size: clamp(17px, 5vh, 24px);
+      }
+
+      #listPanel.is-viewing .run-summary {
+        gap: 3px;
+        padding: 4px;
+      }
+
+      #listPanel.is-viewing .run-summary-line {
+        font-size: clamp(15px, 3.2vh, 20px);
+      }
+
+      #listPanel.is-viewing .progress-track {
+        height: 12px;
+        border-width: 2px;
+      }
+
+      #listPanel.is-viewing .current-skill {
+        min-height: 50px;
+        padding: 3px;
+      }
+
+      #listPanel.is-viewing .current-skill-count {
+        font-size: clamp(38px, 12vh, 72px);
+      }
+
+      #listPanel.is-viewing .current-skill-target {
+        right: 6px;
+        bottom: 5px;
+        font-size: clamp(20px, 4vh, 30px);
+      }
+
+      #listPanel.is-viewing .list-controls {
+        gap: 4px;
+      }
+
+      #listPanel.is-viewing .list-controls .plus,
+      #listPanel.is-viewing .list-controls .minus {
+        min-height: 36px;
+        font-size: clamp(24px, 6vh, 38px);
+      }
+
+      #listPanel.is-viewing .list-controls .clear,
+      #listPanel.is-viewing .todo-practice-footer button {
+        min-height: 32px;
+        font-size: clamp(14px, 3vw, 20px);
       }
     }
 
@@ -2248,6 +2463,14 @@
           <button id="editTodo" type="button" aria-pressed="false">hide skill</button>
         </div>
 
+        <div class="todo-mode-actions">
+          <button id="listViewButton" type="button" aria-pressed="false">view</button>
+          <div class="todo-history-actions" aria-label="TODO history">
+            <button id="todoUndoButton" type="button" disabled>undo</button>
+            <button id="todoRedoButton" type="button" disabled>redo</button>
+          </div>
+        </div>
+
         <select id="listSelector" class="list-select" aria-label="Choose a TODO"></select>
 
         <div class="list-toolbar">
@@ -2259,9 +2482,8 @@
         <div class="list-reset-actions">
           <button id="resetTodo" class="todo-reset" type="button">reset all</button>
         </div>
-        <div class="todo-history-actions" aria-label="TODO history">
-          <button id="todoUndoButton" type="button" disabled>undo</button>
-          <button id="todoRedoButton" type="button" disabled>redo</button>
+        <div id="todoPracticeFooter" class="todo-practice-footer" hidden>
+          <button id="exitTodoView" type="button">exit view</button>
         </div>
       </section>
 
@@ -2721,6 +2943,9 @@
     const resetTodo = document.getElementById("resetTodo");
     const todoUndoButton = document.getElementById("todoUndoButton");
     const todoRedoButton = document.getElementById("todoRedoButton");
+    const listViewButton = document.getElementById("listViewButton");
+    const todoPracticeFooter = document.getElementById("todoPracticeFooter");
+    const exitTodoView = document.getElementById("exitTodoView");
     const listPanel = document.getElementById("listPanel");
     const listTableHead = document.getElementById("listTableHead");
     const listTableBody = document.getElementById("listTableBody");
@@ -2813,6 +3038,7 @@
     let selectedSkillEditId = null;
     let skillFlashTimer = null;
     let isListEditing = false;
+    let isListViewing = false;
     let isMultipleEditing = true;
     let areMultipleScoresHidden = false;
     let stopwatchPlaying = false;
@@ -3972,6 +4198,7 @@
         : state.lists[0]?.id || null;
       state.listSeedVersion = snapshot.listSeedVersion || 0;
       isListEditing = false;
+      isListViewing = false;
       hideTodoCelebration();
       saveState();
       renderList();
@@ -4664,9 +4891,23 @@
         return;
       }
       isListEditing = editing;
+      if (editing) isListViewing = false;
       draggedSkillId = null;
       renderList();
       statusbar.textContent = editing ? "reorder skills" : "TODO ready";
+    }
+
+    function setListViewing(viewing) {
+      clearTodoActionConfirmation();
+      if (viewing && !getSelectedList()) {
+        statusbar.textContent = "make a TODO first";
+        return;
+      }
+      isListViewing = viewing;
+      if (viewing) isListEditing = false;
+      draggedSkillId = null;
+      renderList();
+      statusbar.textContent = viewing ? "TODO view ready" : "TODO ready";
     }
 
     function moveSkillRelative(sourceId, targetId, insertAfter) {
@@ -4737,12 +4978,20 @@
 
       if (!hasList) {
         isListEditing = false;
+        isListViewing = false;
         draggedSkillId = null;
       }
+      const isPracticeView = state.mode === "list" && isListViewing;
       listPanel.classList.toggle("is-editing", isListEditing);
+      listPanel.classList.toggle("is-viewing", isPracticeView);
+      document.body.classList.toggle("todo-practice-view", isPracticeView);
       editTodo.disabled = !hasList;
       editTodo.textContent = isListEditing ? "done" : "hide skill";
       editTodo.setAttribute("aria-pressed", isListEditing ? "true" : "false");
+      listViewButton.disabled = !hasList;
+      listViewButton.classList.toggle("is-active", isPracticeView);
+      listViewButton.setAttribute("aria-pressed", String(isPracticeView));
+      todoPracticeFooter.hidden = !isPracticeView;
 
       listSelector.innerHTML = "";
       if (!state.lists.length) {
@@ -4835,22 +5084,27 @@
         row.classList.toggle("is-complete", isSkillComplete);
 
         const name = document.createElement("td");
-        name.className = "skill-editable";
         name.textContent = skill.name;
-        name.tabIndex = 0;
-        name.setAttribute("role", "button");
-        name.setAttribute("aria-label", "Double-tap to edit " + skill.name);
-        name.title = "Double-tap to edit skill name";
-        bindSkillEditTrigger(name, () => openSkillEditDialog(skill.id, "name"));
+        if (!isPracticeView) {
+          name.className = "skill-editable";
+          name.tabIndex = 0;
+          name.setAttribute("role", "button");
+          name.setAttribute("aria-label", "Double-tap to edit " + skill.name);
+          name.title = "Double-tap to edit skill name";
+          bindSkillEditTrigger(name, () => openSkillEditDialog(skill.id, "name"));
+        }
 
         const reps = document.createElement("td");
-        reps.className = "skill-progress skill-editable";
+        reps.className = "skill-progress";
         reps.textContent = skill.completed + " / " + skill.reps;
-        reps.tabIndex = 0;
-        reps.setAttribute("role", "button");
-        reps.setAttribute("aria-label", "Double-tap to edit goal number for " + skill.name);
-        reps.title = "Double-tap to edit goal number";
-        bindSkillEditTrigger(reps, () => openSkillEditDialog(skill.id, "reps"));
+        if (!isPracticeView) {
+          reps.classList.add("skill-editable");
+          reps.tabIndex = 0;
+          reps.setAttribute("role", "button");
+          reps.setAttribute("aria-label", "Double-tap to edit goal number for " + skill.name);
+          reps.title = "Double-tap to edit goal number";
+          bindSkillEditTrigger(reps, () => openSkillEditDialog(skill.id, "reps"));
+        }
 
         const status = document.createElement("td");
         status.textContent = skill.hidden ? "hidden" : isSkillComplete ? "complete" : isCurrent ? "current" : "up next";
@@ -5329,6 +5583,7 @@
       clearTodoActionConfirmation();
       streakCounter.cancelConfirmations();
       if (stopwatchPlaying && mode !== "stopwatch") exitStopwatchPlay();
+      if (mode !== "list") isListViewing = false;
       state.mode = mode;
       isMultipleEditing = mode === "multiple";
       if (mode === "streak") streakCounter.setEditing(true);
@@ -5710,6 +5965,7 @@
       state.lists.push(list);
       state.selectedListId = list.id;
       isListEditing = false;
+      isListViewing = false;
       saveState();
       renderList();
       statusbar.textContent = name + " TODO created";
@@ -5767,6 +6023,7 @@
       state.lists = state.lists.filter((item) => item.id !== list.id);
       state.selectedListId = state.lists[0]?.id || null;
       isListEditing = false;
+      isListViewing = false;
       saveState();
       renderList();
       closeCounterDialog(deleteListDialog);
@@ -5933,6 +6190,7 @@
       clearTodoActionConfirmation();
       state.selectedListId = listSelector.value;
       isListEditing = false;
+      isListViewing = false;
       saveState();
       renderList();
       statusbar.textContent = getSelectedList().name + " selected";
@@ -5942,6 +6200,8 @@
     deleteList.addEventListener("click", openDeleteListDialog);
     addSkill.addEventListener("click", openAddSkillDialog);
     editTodo.addEventListener("click", () => setListEditing(!isListEditing));
+    listViewButton.addEventListener("click", () => setListViewing(true));
+    exitTodoView.addEventListener("click", () => setListViewing(false));
     listPlus.addEventListener("click", () => changeCurrentSkill(1));
     listMinus.addEventListener("click", () => {
       if (!listMinus.disabled) armOrConfirmTodoAction("minus", "−", () => changeCurrentSkill(-1));
