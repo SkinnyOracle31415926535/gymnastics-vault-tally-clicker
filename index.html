@@ -1012,6 +1012,32 @@
       accent-color: var(--black);
     }
 
+    .single-settings {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .single-setting {
+      min-height: 48px;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 10px;
+      border: 4px solid var(--black);
+      font-size: 19px;
+      font-weight: 500;
+      line-height: 1;
+      text-transform: lowercase;
+      text-shadow: 0 0 1.6px rgba(5, 5, 5, 0.46);
+    }
+
+    .single-setting input {
+      width: 25px;
+      height: 25px;
+      margin: 0;
+      accent-color: var(--black);
+    }
+
     .class-roster-note {
       font-size: 17px;
       font-weight: 500;
@@ -2568,6 +2594,12 @@
           <button id="clearButton" class="clear" type="button">clear</button>
           <button id="singleScoresButton" class="single-scores-button" type="button" aria-pressed="false">hide scores</button>
         </div>
+        <div class="single-settings">
+          <label class="single-setting" for="increasePitch">
+            <input id="increasePitch" type="checkbox">
+            increase pitch
+          </label>
+        </div>
       </section>
 
       <section id="multiplePanel" class="panel" aria-label="Multiple point counters">
@@ -2606,6 +2638,10 @@
             <input id="showMultipleLeader" type="checkbox" checked>
             show leader box
           </label>
+          <label class="multiple-setting" for="increasePitchMultiple">
+            <input id="increasePitchMultiple" type="checkbox">
+            increase pitch
+          </label>
         </div>
       </section>
 
@@ -2631,6 +2667,12 @@
           <button id="listPlus" class="plus" type="button" aria-label="Log one repetition for the current skill">+</button>
           <button id="listMinus" class="minus" type="button" aria-label="Remove one repetition from the current skill">−</button>
           <button id="resetCurrentSkill" class="clear" type="button">reset</button>
+        </div>
+        <div class="single-settings todo-sound-setting">
+          <label class="single-setting" for="increasePitchTodo">
+            <input id="increasePitchTodo" type="checkbox">
+            increase pitch
+          </label>
         </div>
 
         <div class="list-table-wrap">
@@ -3042,6 +3084,8 @@
     const minusButton = document.getElementById("minusButton");
     const clearButton = document.getElementById("clearButton");
     const singleScoresButton = document.getElementById("singleScoresButton");
+    const increasePitch = document.getElementById("increasePitch");
+    const increasePitchTodo = document.getElementById("increasePitchTodo");
     const menuToggle = document.getElementById("menuToggle");
     const modeMenu = document.getElementById("modeMenu");
     const modeButtons = Array.from(document.querySelectorAll(".mode-button"));
@@ -3055,6 +3099,7 @@
     const multipleLeader = document.getElementById("multipleLeader");
     const showMultipleDailyRecords = document.getElementById("showMultipleDailyRecords");
     const showMultipleLeader = document.getElementById("showMultipleLeader");
+    const increasePitchMultiple = document.getElementById("increasePitchMultiple");
     const multipleList = document.getElementById("multipleList");
     const resetMultiple = document.getElementById("resetMultiple");
     const multipleViewButton = document.getElementById("multipleViewButton");
@@ -3195,6 +3240,7 @@
     let state = {
       mode: "single",
       single: 0,
+      increasePitch: false,
       multiple: [],
       showMultipleDailyRecords: false,
       multipleDailyRecordDate: "",
@@ -4246,6 +4292,7 @@
         if (saved && typeof saved === "object") {
           state.mode = saved.mode === "list" ? "list" : saved.mode === "streak" ? "streak" : saved.mode === "stopwatch" ? "stopwatch" : saved.mode === "single" ? "single" : ["multiple", "teams", "individuals"].includes(saved.mode) ? "multiple" : "single";
           state.single = Number.isFinite(Number(saved.single)) ? Number(saved.single) : state.single;
+          state.increasePitch = saved.increasePitch === true;
 
           if (Array.isArray(saved.multiple)) {
             state.multiple = normalizeCounters(saved.multiple, "group");
@@ -4277,6 +4324,7 @@
         if (!hasSavedState && Number.isFinite(legacy)) state.single = legacy;
       } catch (error) {
         state.mode = "single";
+        state.increasePitch = false;
         state.multiple = [];
         state.showMultipleDailyRecords = false;
         state.multipleDailyRecordDate = "";
@@ -4476,6 +4524,68 @@
 
     }
 
+    function playSatisfyingClick(context, now) {
+      const output = context.createGain();
+      const keycap = context.createOscillator();
+      const keycapGain = context.createGain();
+      const pop = context.createOscillator();
+      const popGain = context.createGain();
+
+      function addSwitchTick(start, duration, volume, frequency) {
+        const source = context.createBufferSource();
+        const filter = context.createBiquadFilter();
+        const gain = context.createGain();
+        const sampleCount = Math.ceil(context.sampleRate * duration);
+        const buffer = context.createBuffer(1, sampleCount, context.sampleRate);
+        const data = buffer.getChannelData(0);
+
+        for (let index = 0; index < sampleCount; index += 1) {
+          const fade = 1 - index / sampleCount;
+          data[index] = (Math.random() * 2 - 1) * fade * fade;
+        }
+
+        source.buffer = buffer;
+        filter.type = "bandpass";
+        filter.frequency.setValueAtTime(frequency, start);
+        filter.Q.setValueAtTime(1.8, start);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(volume, start + 0.001);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+        source.connect(filter);
+        filter.connect(gain);
+        gain.connect(output);
+        source.start(start);
+        source.stop(start + duration + 0.001);
+      }
+
+      keycap.type = "triangle";
+      keycap.frequency.setValueAtTime(900, now);
+      pop.type = "sine";
+      pop.frequency.setValueAtTime(540, now);
+      pop.frequency.exponentialRampToValueAtTime(280, now + 0.09);
+      output.gain.setValueAtTime(0.0001, now);
+      output.gain.exponentialRampToValueAtTime(0.44, now + 0.001);
+      output.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+      keycapGain.gain.setValueAtTime(0.34, now);
+      keycapGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.042);
+      popGain.gain.setValueAtTime(0.0001, now);
+      popGain.gain.exponentialRampToValueAtTime(0.5, now + 0.003);
+      popGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
+      keycap.connect(keycapGain);
+      pop.connect(popGain);
+      keycapGain.connect(output);
+      popGain.connect(output);
+      output.connect(context.destination);
+
+      addSwitchTick(now, 0.004, 0.5, 5600);
+      addSwitchTick(now + 0.008, 0.007, 0.3, 3000);
+      addSwitchTick(now + 0.052, 0.004, 0.16, 5200);
+      keycap.start(now);
+      pop.start(now);
+      keycap.stop(now + 0.052);
+      pop.stop(now + 0.11);
+    }
+
     function playMinusSound(context, now) {
       const oscillator = context.createOscillator();
       const gain = context.createGain();
@@ -4574,7 +4684,11 @@
       const now = context.currentTime;
 
       if (kind === "plus") {
-        playIncrementDing(context, now, score);
+        if (state.increasePitch) {
+          playIncrementDing(context, now, score);
+        } else {
+          playSatisfyingClick(context, now);
+        }
       } else if (kind === "goal") {
         playSkillGoalCelebration(context, now);
       } else if (kind === "todo") {
@@ -4649,6 +4763,7 @@
       clearButton.setAttribute("aria-label", singleClearArmed ? "Tap clear again to reset the counter" : "Clear the counter");
       singleScoresButton.textContent = areSingleScoresHidden ? "reveal scores" : "hide scores";
       singleScoresButton.setAttribute("aria-pressed", String(areSingleScoresHidden));
+      increasePitch.checked = state.increasePitch;
     }
 
     function getCounterCard(id) {
@@ -5076,6 +5191,7 @@
       multipleLeader.hidden = !state.showMultipleLeader;
       showMultipleDailyRecords.checked = state.showMultipleDailyRecords;
       showMultipleLeader.checked = state.showMultipleLeader;
+      increasePitchMultiple.checked = state.increasePitch;
       renderMultipleViewMode();
     }
 
@@ -5223,6 +5339,7 @@
       todoPracticeFooter.hidden = !isPracticeView;
       todoScoresButton.textContent = areTodoScoresHidden ? "reveal scores" : "hide scores";
       todoScoresButton.setAttribute("aria-pressed", String(areTodoScoresHidden));
+      increasePitchTodo.checked = state.increasePitch;
 
       listSelector.innerHTML = "";
       if (!state.lists.length) {
@@ -6470,6 +6587,23 @@
       areSingleScoresHidden = !areSingleScoresHidden;
       renderSingle();
       statusbar.textContent = areSingleScoresHidden ? "single score hidden" : "single score revealed";
+    });
+    function setIncreasePitch(enabled) {
+      state.increasePitch = enabled;
+      saveState();
+      renderSingle();
+      renderMultiple();
+      renderList();
+      statusbar.textContent = state.increasePitch ? "pitch increases with every point" : "steady click sound selected";
+    }
+    increasePitch.addEventListener("change", () => {
+      setIncreasePitch(increasePitch.checked);
+    });
+    increasePitchMultiple.addEventListener("change", () => {
+      setIncreasePitch(increasePitchMultiple.checked);
+    });
+    increasePitchTodo.addEventListener("change", () => {
+      setIncreasePitch(increasePitchTodo.checked);
     });
     resetMultiple.addEventListener("click", () => openResetDialog("multiple"));
     multipleViewButton.addEventListener("click", () => setMultipleEditing(false));
