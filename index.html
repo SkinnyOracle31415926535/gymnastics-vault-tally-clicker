@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <script src="https://student-shuffle-shared.ryan-666-mp3.chatgpt.site/durable-storage.js" data-durable-namespace="github-pages-origin-v1"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tally Clicker</title>
   <style>
@@ -55,6 +54,19 @@
         repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.045) 0, rgba(0, 0, 0, 0.045) 1px, transparent 1px, transparent 5px);
       mix-blend-mode: soft-light;
       opacity: 0.58;
+    }
+
+    /* Safari on touch devices can stall while repainting a full-screen backdrop blur. */
+    @media (hover: none) and (pointer: coarse) {
+      body::before {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+      }
+
+      body::after {
+        mix-blend-mode: normal;
+        opacity: 0.28;
+      }
     }
 
     button,
@@ -4317,6 +4329,11 @@
       state.stopwatch = normalizeStopwatchState(state.stopwatch, state.classes);
     }
 
+    function haveSharedClassesChanged(sharedClasses) {
+      const currentSharedClasses = state.classes.filter(isSharedClass);
+      return JSON.stringify(currentSharedClasses) !== JSON.stringify(sharedClasses);
+    }
+
     async function loadStudentShufflerClasses({ announce = false } = {}) {
       try {
         const response = await fetch(SHARED_ROSTER_API_URL, { cache: "no-store" });
@@ -4325,9 +4342,12 @@
         const payload = await response.json();
         if (!payload || typeof payload !== "object" || !payload.state) throw new Error("Student Shuffler roster response is invalid");
 
-        replaceSharedClasses(buildStudentShufflerClasses(payload.state));
-        saveState();
-        render();
+        const sharedClasses = buildStudentShufflerClasses(payload.state);
+        if (haveSharedClassesChanged(sharedClasses)) {
+          replaceSharedClasses(sharedClasses);
+          saveState();
+          render();
+        }
         if (announce) statusbar.textContent = "Student Shuffler class groups synced";
       } catch (error) {
         if (announce) statusbar.textContent = "Student Shuffler groups could not load; saved Tally Clicker groups are still available";
@@ -8023,7 +8043,6 @@
     streakCounter.load();
     render();
     loadStudentShufflerClasses({ announce: true });
-    window.addEventListener("focus", () => loadStudentShufflerClasses());
   </script>
 </body>
 </html>
