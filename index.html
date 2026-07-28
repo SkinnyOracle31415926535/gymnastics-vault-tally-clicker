@@ -56,19 +56,6 @@
       opacity: 0.58;
     }
 
-    /* Safari on touch devices can stall while repainting a full-screen backdrop blur. */
-    @media (hover: none) and (pointer: coarse) {
-      body::before {
-        -webkit-backdrop-filter: none;
-        backdrop-filter: none;
-      }
-
-      body::after {
-        mix-blend-mode: normal;
-        opacity: 0.28;
-      }
-    }
-
     button,
     input,
     select,
