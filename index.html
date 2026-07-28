@@ -2601,6 +2601,7 @@
             increase pitch
           </label>
         </div>
+        <div id="singleClassSlot" class="class-roster-slot"></div>
       </section>
 
       <section id="multiplePanel" class="panel" aria-label="Multiple point counters">
@@ -2617,7 +2618,7 @@
         </div>
         <div id="multipleClassSlot" class="class-roster-slot">
           <div id="classRosterPanel" class="class-roster-panel" aria-label="Saved class rosters">
-            <div class="class-roster-title">saved classes</div>
+            <div class="class-roster-title">class groups</div>
             <button id="classSelector" class="list-select class-picker-trigger" type="button" aria-haspopup="dialog" aria-controls="classPickerDialog" aria-expanded="false">
               <span id="classSelectorName">no saved classes yet</span>
               <span id="classSelectorOpen" class="class-picker-open" aria-hidden="true">empty</span>
@@ -2627,7 +2628,7 @@
               <button id="newClass" type="button">new</button>
               <button id="editClass" type="button">edit</button>
             </div>
-            <div class="class-roster-note">make a class once, then use it in multiple, streak, or stopwatch.</div>
+            <div id="classRosterNote" class="class-roster-note">Loading your Student Shuffler groups...</div>
           </div>
         </div>
         <div class="multiple-settings">
@@ -2675,6 +2676,7 @@
             increase pitch
           </label>
         </div>
+        <div id="listClassSlot" class="class-roster-slot"></div>
 
         <div class="list-table-wrap">
           <table class="list-table">
@@ -3063,6 +3065,30 @@
     const OLDER_STORAGE_KEY = "custom-points-counter-state-v3";
     const OLDEST_STORAGE_KEY = "custom-points-counter-state-v2";
     const LEGACY_SINGLE_KEY = "custom-points-counter-value-v1";
+    const SHARED_ROSTER_API_URL = "https://student-shuffle-shared.ryan-666-mp3.chatgpt.site/api/rosters";
+    const SHARED_CLASS_ID_PREFIX = "student-shuffler:";
+    const STUDENT_SHUFFLER_BUILT_INS = [
+      {
+        key: "builtin:level-3-boys",
+        name: "boys level 3",
+        students: ["Fabian Fernandes", "Ethan Grinberg", "Weston Schomaker", "Daniel Shatil", "Ariel Shatil", "Logan Huynh"]
+      },
+      {
+        key: "builtin:boys-nga",
+        name: "boys nga",
+        students: ["Benjamin Bowie Christopher", "Kenneth Chan", "Maxon Edington", "Cody Goodman", "Zayd Lakhani", "Adam Pagsolingan", "Ryan Pagsolingan", "Oliver Rodriguez"]
+      },
+      {
+        key: "builtin:boys-level-4",
+        name: "boys level 4",
+        students: ["Maksim Bychkov", "Jace Jackson", "Aarush Kini", "Owen Lavrich", "Kaleb Jax Muolic", "Uladzislau Samoilenka"]
+      },
+      {
+        key: "builtin:advanced-boys",
+        name: "boys advanced",
+        students: ["Ildar Bekov", "Dominic Chan"]
+      }
+    ];
     const DEFAULT_LIST_SEED_VERSION = 2;
     const PREVIOUS_TODO_ID = "l3-floor-form-2026-07-13";
     const TODAY_FULL_TURN_TODO = {
@@ -3119,7 +3145,9 @@
     const confirmRemove = document.getElementById("confirmRemove");
     const cancelRemove = document.getElementById("cancelRemove");
     const classRosterPanel = document.getElementById("classRosterPanel");
+    const singleClassSlot = document.getElementById("singleClassSlot");
     const multipleClassSlot = document.getElementById("multipleClassSlot");
+    const listClassSlot = document.getElementById("listClassSlot");
     const streakClassSlot = document.getElementById("streakClassSlot");
     const stopwatchClassSlot = document.getElementById("stopwatchClassSlot");
     const classSelector = document.getElementById("classSelector");
@@ -3131,6 +3159,7 @@
     const loadClass = document.getElementById("loadClass");
     const newClass = document.getElementById("newClass");
     const editClass = document.getElementById("editClass");
+    const classRosterNote = document.getElementById("classRosterNote");
     const deleteClassFromEdit = document.getElementById("deleteClassFromEdit");
     const classDialog = document.getElementById("classDialog");
     const classForm = document.getElementById("classForm");
@@ -4207,13 +4236,102 @@
         const students = (Array.isArray(savedClass.students) ? savedClass.students : [])
           .map((student, studentIndex) => makeUniqueName(student, "student " + (studentIndex + 1), studentNames));
 
-        return {
+        const normalizedClass = {
           id,
           name: makeUniqueName(savedClass.name, "class " + (index + 1), usedNames),
           students,
           neededByStudent: normalizeNeededByStudent(savedClass.neededByStudent, students)
         };
+
+        if (typeof savedClass.sharedRosterKey === "string" && savedClass.sharedRosterKey) {
+          normalizedClass.sharedRosterKey = savedClass.sharedRosterKey;
+        }
+
+        return normalizedClass;
       });
+    }
+
+    function normalizeSharedRosterStudents(rawStudents) {
+      const usedNames = new Set();
+      if (!Array.isArray(rawStudents)) return [];
+
+      return rawStudents
+        .map(normalizeName)
+        .filter((student) => {
+          const key = student.toLocaleLowerCase();
+          if (!key || usedNames.has(key)) return false;
+          usedNames.add(key);
+          return true;
+        });
+    }
+
+    function getSharedClassId(key) {
+      return SHARED_CLASS_ID_PREFIX + encodeURIComponent(key);
+    }
+
+    function isSharedClass(savedClass) {
+      return Boolean(savedClass?.sharedRosterKey) || String(savedClass?.id || "").startsWith(SHARED_CLASS_ID_PREFIX);
+    }
+
+    function buildStudentShufflerClasses(rawState) {
+      const source = rawState && typeof rawState === "object" && !Array.isArray(rawState) ? rawState : {};
+      const overrides = source.builtinOverrides && typeof source.builtinOverrides === "object" && !Array.isArray(source.builtinOverrides)
+        ? source.builtinOverrides
+        : {};
+      const custom = source.custom && typeof source.custom === "object" && !Array.isArray(source.custom)
+        ? source.custom
+        : {};
+      const sharedClasses = STUDENT_SHUFFLER_BUILT_INS.map((savedClass) => ({
+        id: getSharedClassId(savedClass.key),
+        name: savedClass.name,
+        students: normalizeSharedRosterStudents(Array.isArray(overrides[savedClass.key]) ? overrides[savedClass.key] : savedClass.students),
+        neededByStudent: {},
+        sharedRosterKey: savedClass.key
+      }));
+
+      Object.entries(custom)
+        .map(([name, students]) => ({ name: normalizeName(name), students }))
+        .filter((savedClass) => savedClass.name)
+        .sort((first, second) => first.name.localeCompare(second.name))
+        .forEach((savedClass) => {
+          const key = "custom:" + savedClass.name;
+          sharedClasses.push({
+            id: getSharedClassId(key),
+            name: savedClass.name,
+            students: normalizeSharedRosterStudents(savedClass.students),
+            neededByStudent: {},
+            sharedRosterKey: key
+          });
+        });
+
+      return normalizeClasses(sharedClasses);
+    }
+
+    function replaceSharedClasses(sharedClasses) {
+      const selectedClassId = state.selectedClassId;
+      const tallyOnlyClasses = state.classes.filter((savedClass) => !isSharedClass(savedClass));
+      state.classes = [...sharedClasses, ...tallyOnlyClasses];
+      state.selectedClassId = state.classes.some((savedClass) => savedClass.id === selectedClassId)
+        ? selectedClassId
+        : state.classes[0]?.id || null;
+      state.stopwatch = normalizeStopwatchState(state.stopwatch, state.classes);
+    }
+
+    async function loadStudentShufflerClasses({ announce = false } = {}) {
+      try {
+        const response = await fetch(SHARED_ROSTER_API_URL, { cache: "no-store" });
+        if (!response.ok) throw new Error("Student Shuffler roster request failed");
+
+        const payload = await response.json();
+        if (!payload || typeof payload !== "object" || !payload.state) throw new Error("Student Shuffler roster response is invalid");
+
+        replaceSharedClasses(buildStudentShufflerClasses(payload.state));
+        saveState();
+        render();
+        if (announce) statusbar.textContent = "Student Shuffler class groups synced";
+      } catch (error) {
+        if (announce) statusbar.textContent = "Student Shuffler groups could not load; saved Tally Clicker groups are still available";
+      }
     }
 
     function normalizeSkill(rawSkill, index, usedIds, usedNames) {
@@ -4732,11 +4850,15 @@
     }
 
     function renderMode() {
-      const classSlot = state.mode === "streak"
-        ? streakClassSlot
-        : state.mode === "stopwatch"
-          ? stopwatchClassSlot
-          : multipleClassSlot;
+      const classSlot = state.mode === "single"
+        ? singleClassSlot
+        : state.mode === "multiple"
+          ? multipleClassSlot
+          : state.mode === "list"
+            ? listClassSlot
+            : state.mode === "streak"
+              ? streakClassSlot
+              : stopwatchClassSlot;
       if (classRosterPanel.parentElement !== classSlot) classSlot.appendChild(classRosterPanel);
 
       modeButtons.forEach((button) => {
@@ -4981,13 +5103,21 @@
     function renderClassRosterControls() {
       const selectedClass = getSelectedClass();
       const isStopwatch = state.mode === "stopwatch";
+      const loadsIntoMultiple = state.mode === "single" || state.mode === "list";
+      const selectedClassIsShared = isSharedClass(selectedClass);
       classSelectorName.textContent = selectedClass?.name || "no saved classes yet";
       classSelectorOpen.textContent = selectedClass ? "open" : "empty";
       classSelector.disabled = !state.classes.length;
       loadClass.disabled = !selectedClass;
       loadClass.textContent = isStopwatch ? "use" : "load";
-      loadClass.setAttribute("aria-label", isStopwatch ? "Use selected class for stopwatch" : "Load selected class");
-      editClass.disabled = !selectedClass;
+      loadClass.setAttribute("aria-label", isStopwatch ? "Use selected class for stopwatch" : loadsIntoMultiple ? "Load selected class in multiple" : "Load selected class");
+      editClass.disabled = !selectedClass || selectedClassIsShared;
+      editClass.title = selectedClassIsShared ? "Edit this shared group in Student Shuffler" : "";
+      classRosterNote.textContent = selectedClassIsShared
+        ? "synced from Student Shuffler — edit it there, then it updates here."
+        : state.classes.some(isSharedClass)
+          ? "Student Shuffler groups stay synced here. New groups are only saved in Tally Clicker."
+          : "Student Shuffler groups are loading...";
     }
 
     function renderClassPickerOptions() {
@@ -5052,6 +5182,10 @@
         statusbar.textContent = "choose a saved class first";
         return;
       }
+      if (isSharedClass(savedClass)) {
+        statusbar.textContent = "edit this shared group in Student Shuffler";
+        return;
+      }
 
       selectedClassEditId = savedClass.id;
       classDialogTitle.textContent = "edit class";
@@ -5106,6 +5240,10 @@
 
       streakCounter.cancelConfirmations(true);
       const existingClass = state.classes.find((savedClass) => savedClass.id === selectedClassEditId);
+      if (isSharedClass(existingClass)) {
+        statusbar.textContent = "edit this shared group in Student Shuffler";
+        return false;
+      }
       let savedClass = existingClass;
       if (existingClass) {
         existingClass.neededByStudent = normalizeNeededByStudent(existingClass.neededByStudent, students);
@@ -5157,12 +5295,18 @@
 
       if (state.multiple.some((item) => item.score !== 0) && !window.confirm("Load " + savedClass.name + " and reset the current scores?")) return;
 
+      const returnToMultiple = state.mode === "single" || state.mode === "list";
       cancelCounterClear(false);
       state.multiple = normalizeCounters(
         savedClass.students.map((name) => ({ name, score: 0 })),
         "student"
       );
       saveState();
+      if (returnToMultiple) {
+        setMode("multiple");
+        statusbar.textContent = savedClass.name + " loaded in multiple with fresh scores";
+        return;
+      }
       renderMultiple();
       statusbar.textContent = savedClass.name + " loaded with fresh scores";
     }
@@ -5170,6 +5314,10 @@
     function deleteSelectedClass() {
       const savedClass = getSelectedClass();
       if (!savedClass) return false;
+      if (isSharedClass(savedClass)) {
+        statusbar.textContent = "delete this shared group in Student Shuffler";
+        return false;
+      }
       streakCounter.cancelConfirmations(true);
       if (!window.confirm("Delete saved class " + savedClass.name + "?")) return false;
 
@@ -7869,8 +8017,13 @@
     })();
 
     loadState();
+    if (!state.classes.some(isSharedClass)) {
+      replaceSharedClasses(buildStudentShufflerClasses());
+    }
     streakCounter.load();
     render();
+    loadStudentShufflerClasses({ announce: true });
+    window.addEventListener("focus", () => loadStudentShufflerClasses());
   </script>
 </body>
 </html>
