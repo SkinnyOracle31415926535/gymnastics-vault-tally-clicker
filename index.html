@@ -630,7 +630,7 @@
       font-size: clamp(24px, 7vw, 42px);
     }
 
-    .counter-actions .counter-clear {
+    .counter-actions .counter-negative {
       color: var(--green);
       background: var(--black);
       font-size: clamp(16px, 4.5vw, 24px);
@@ -640,13 +640,6 @@
     .counter-actions .counter-enter {
       font-size: clamp(16px, 4.5vw, 24px);
       text-transform: lowercase;
-    }
-
-    .counter-actions .counter-clear.armed {
-      color: var(--black);
-      background: var(--green);
-      outline: 4px solid var(--black);
-      outline-offset: -7px;
     }
 
     .multiple-action {
@@ -730,7 +723,7 @@
     }
 
     #multiplePanel.practice-view .counter-card {
-      grid-template-columns: minmax(0, 1fr) minmax(88px, 104px) repeat(4, minmax(52px, 66px));
+      grid-template-columns: minmax(0, 1fr) minmax(88px, 104px) repeat(4, minmax(52px, 72px));
       min-height: 0;
       padding: 4px;
       gap: 4px;
@@ -795,8 +788,8 @@
       font-size: clamp(28px, 5vh, 42px);
     }
 
-    #multiplePanel.practice-view .counter-actions .counter-clear {
-      font-size: clamp(14px, 2.5vh, 20px);
+    #multiplePanel.practice-view .counter-actions .counter-negative {
+      font-size: clamp(11px, 2.2vh, 16px);
     }
 
     #multiplePanel.practice-view .counter-actions .counter-enter {
@@ -5108,16 +5101,16 @@
         enter.setAttribute("aria-label", "Enter points to add to " + item.name);
         enter.addEventListener("click", () => openMultipleAmountPad(item.id, enter, card));
 
-        const clear = document.createElement("button");
-        const clearIsArmed = armedCounterClearId === item.id;
-        clear.type = "button";
-        clear.className = "counter-clear" + (clearIsArmed ? " armed" : "");
-        clear.textContent = clearIsArmed ? "confirm" : (isMultipleEditing ? "clear" : "reset");
-        clear.setAttribute("aria-pressed", String(clearIsArmed));
-        clear.setAttribute("aria-label", clearIsArmed ? "Confirm resetting " + item.name : (isMultipleEditing ? "Clear points for " : "Reset points for ") + item.name);
-        clear.addEventListener("click", () => clearMultipleCounter(item.id));
+        const negative = document.createElement("button");
+        negative.type = "button";
+        negative.className = "counter-negative";
+        negative.textContent = "negative";
+        negative.setAttribute("aria-haspopup", "dialog");
+        negative.setAttribute("aria-controls", "bratKeyboardDialog");
+        negative.setAttribute("aria-label", "Enter points to remove from " + item.name);
+        negative.addEventListener("click", () => openMultipleAmountPad(item.id, negative, card, -1));
 
-        actions.append(plus, minus, enter, clear);
+        actions.append(plus, minus, enter, negative);
         if (isMultipleEditing) {
           const visibility = document.createElement("button");
           visibility.type = "button";
@@ -6289,13 +6282,16 @@
       flash(updatedCard || element, amount > 0 ? "plus" : "minus");
     }
 
-    function openMultipleAmountPad(id, trigger, element) {
+    function openMultipleAmountPad(id, trigger, element, direction = 1) {
       const item = state.multiple.find((counter) => counter.id === id);
       if (!item) return;
 
+      const isNegative = direction < 0;
+      const actionLabel = isNegative ? "negative" : "enter";
+
       openBratKeyboard(trigger, {
         value: "",
-        label: "add points to " + item.name,
+        label: (isNegative ? "remove points from " : "add points to ") + item.name,
         mode: "numeric",
         required: true,
         min: 1,
@@ -6304,13 +6300,13 @@
         selectAll: true,
         dispatchChange: false,
         onDraft(value) {
-          trigger.textContent = value || "enter";
+          trigger.textContent = value || actionLabel;
         },
         onCommit(rawValue) {
           const amount = Number(rawValue);
           if (!Number.isInteger(amount) || amount < 1 || amount > 999) return "enter 1–999";
-          trigger.textContent = "enter";
-          changeMultipleScore(id, amount, element);
+          trigger.textContent = actionLabel;
+          changeMultipleScore(id, amount * direction, element);
           return true;
         }
       });
