@@ -56,19 +56,6 @@
       opacity: 0.58;
     }
 
-    /* Safari on touch devices can stall while repainting a full-screen backdrop blur. */
-    @media (hover: none) and (pointer: coarse) {
-      body::before {
-        -webkit-backdrop-filter: none;
-        backdrop-filter: none;
-      }
-
-      body::after {
-        mix-blend-mode: normal;
-        opacity: 0.28;
-      }
-    }
-
     button,
     input,
     select,
@@ -5364,6 +5351,24 @@
       renderMultipleViewMode();
     }
 
+    function updateMultipleViewScore(item) {
+      const card = getCounterCard(item.id);
+      if (!card) {
+        renderMultiple();
+        return getCounterCard(item.id);
+      }
+
+      const scoreHidden = areMultipleScoresHidden;
+      const scoreValue = card.querySelector(".counter-score-value");
+      if (scoreValue) scoreValue.textContent = scoreHidden ? "?" : item.score;
+      card.setAttribute("aria-label", item.name + ": " + (scoreHidden ? "score hidden" : item.score + " points"));
+
+      const dailyRecord = card.querySelector(".counter-daily-record");
+      if (dailyRecord) dailyRecord.textContent = "best " + getMultipleDailyRecord(item.name);
+      multipleLeader.textContent = getLeader(getVisibleCounters(), "multiple points");
+      return card;
+    }
+
     function addListTableMessage(message, columnCount = 3) {
       const row = document.createElement("tr");
       const cell = document.createElement("td");
@@ -6244,13 +6249,19 @@
       item.score += amount;
       const newBest = amount > 0 && updateMultipleDailyRecord(item);
       saveState();
-      renderMultiple();
+      let updatedCard;
+      if (isMultipleEditing) {
+        renderMultiple();
+        updatedCard = getCounterCard(item.id);
+      } else {
+        updatedCard = updateMultipleViewScore(item);
+      }
       playSound(amount > 0 ? "plus" : "minus", item.score);
       statusbar.textContent = newBest
         ? item.name + " new best: " + item.score
         : item.name + (amount > 0 ? " +1" : " -1");
 
-      flash(getCounterCard(item.id) || element, amount > 0 ? "plus" : "minus");
+      flash(updatedCard || element, amount > 0 ? "plus" : "minus");
     }
 
     function cancelCounterClear(render = true) {
