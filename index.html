@@ -1274,6 +1274,16 @@
       min-width: 104px;
     }
 
+    .list-table .skill-edit-actions {
+      display: grid;
+      gap: 6px;
+      min-width: 104px;
+    }
+
+    .list-table .skill-edit-actions > .skill-order-button {
+      width: 100%;
+    }
+
     .list-table tr.drag-over td {
       color: var(--green);
       background: var(--black);
@@ -2351,6 +2361,37 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
+      .list-table.editing {
+        min-width: 0;
+        table-layout: fixed;
+      }
+
+      .list-table.editing th,
+      .list-table.editing td {
+        padding: 8px 6px;
+      }
+
+      .list-table.editing th:nth-child(1),
+      .list-table.editing td:nth-child(1) {
+        width: 47%;
+        overflow-wrap: anywhere;
+      }
+
+      .list-table.editing th:nth-child(2),
+      .list-table.editing td:nth-child(2) {
+        width: 18%;
+      }
+
+      .list-table.editing th:nth-child(3),
+      .list-table.editing td:nth-child(3) {
+        width: 35%;
+      }
+
+      .list-table.editing .skill-edit-actions,
+      .list-table.editing .skill-order-actions {
+        min-width: 0;
+      }
+
       #listPanel.is-viewing .list-controls .clear {
         grid-column: 1 / -1;
       }
@@ -2702,7 +2743,7 @@
 
         <div class="list-actions">
           <button id="addSkill" type="button">add skill</button>
-          <button id="editTodo" type="button" aria-pressed="false">hide skill</button>
+          <button id="editTodo" type="button" aria-pressed="false">edit</button>
         </div>
 
         <div class="todo-mode-actions">
@@ -5414,7 +5455,7 @@
       if (editing) isListViewing = false;
       draggedSkillId = null;
       renderList();
-      statusbar.textContent = editing ? "reorder skills" : "TODO ready";
+      statusbar.textContent = editing ? "hide or reorder skills" : "TODO ready";
     }
 
     function setListViewing(viewing) {
@@ -5460,6 +5501,7 @@
       const targetIndex = list?.skills.findIndex((skill) => skill.id === targetId) ?? -1;
       if (!list || sourceIndex < 0 || targetIndex < 0) return;
 
+      rememberTodoState();
       const [movedSkill] = list.skills.splice(sourceIndex, 1);
       const nextTargetIndex = list.skills.findIndex((skill) => skill.id === targetId);
       list.skills.splice(nextTargetIndex + (insertAfter ? 1 : 0), 0, movedSkill);
@@ -5487,7 +5529,7 @@
       statusbar.textContent = skill.name + (skill.hidden ? " hidden" : " shown");
     }
 
-    function appendSkillEditRow(skill) {
+    function appendSkillEditRow(skill, skillIndex, skillCount) {
       const row = document.createElement("tr");
       row.classList.toggle("is-current", getCurrentSkill(getSelectedList())?.id === skill.id);
       row.classList.toggle("is-complete", skill.completed >= skill.reps);
@@ -5497,15 +5539,36 @@
       const reps = document.createElement("td");
       reps.className = "skill-progress";
       reps.textContent = skill.completed + " / " + skill.reps;
-      const visibility = document.createElement("td");
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "skill-order-button";
-      button.textContent = skill.hidden ? "show" : "hide";
-      button.setAttribute("aria-label", (skill.hidden ? "Show " : "Hide ") + skill.name);
-      button.addEventListener("click", () => toggleSkillVisibility(skill.id));
-      visibility.appendChild(button);
-      row.append(name, reps, visibility);
+      const actions = document.createElement("td");
+      actions.className = "skill-edit-actions";
+      const visibilityButton = document.createElement("button");
+      visibilityButton.type = "button";
+      visibilityButton.className = "skill-order-button";
+      visibilityButton.textContent = skill.hidden ? "show" : "hide";
+      visibilityButton.setAttribute("aria-label", (skill.hidden ? "Show " : "Hide ") + skill.name);
+      visibilityButton.addEventListener("click", () => toggleSkillVisibility(skill.id));
+
+      const orderActions = document.createElement("div");
+      orderActions.className = "skill-order-actions";
+      const moveUp = document.createElement("button");
+      moveUp.type = "button";
+      moveUp.className = "skill-order-button";
+      moveUp.textContent = "↑";
+      moveUp.disabled = skillIndex === 0;
+      moveUp.setAttribute("aria-label", "Move " + skill.name + " up");
+      moveUp.title = skillIndex === 0 ? skill.name + " is already first" : "Move " + skill.name + " up";
+      moveUp.addEventListener("click", () => moveSkillByOffset(skill.id, -1));
+      const moveDown = document.createElement("button");
+      moveDown.type = "button";
+      moveDown.className = "skill-order-button";
+      moveDown.textContent = "↓";
+      moveDown.disabled = skillIndex === skillCount - 1;
+      moveDown.setAttribute("aria-label", "Move " + skill.name + " down");
+      moveDown.title = skillIndex === skillCount - 1 ? skill.name + " is already last" : "Move " + skill.name + " down";
+      moveDown.addEventListener("click", () => moveSkillByOffset(skill.id, 1));
+      orderActions.append(moveUp, moveDown);
+      actions.append(visibilityButton, orderActions);
+      row.append(name, reps, actions);
       listTableBody.appendChild(row);
     }
 
@@ -5530,7 +5593,7 @@
       listPanel.classList.toggle("is-viewing", isPracticeView);
       document.body.classList.toggle("todo-practice-view", isPracticeView);
       editTodo.disabled = !hasList;
-      editTodo.textContent = isListEditing ? "done" : "hide skill";
+      editTodo.textContent = isListEditing ? "done" : "edit";
       editTodo.setAttribute("aria-pressed", isListEditing ? "true" : "false");
       listViewButton.disabled = !hasList;
       listViewButton.classList.toggle("is-active", isPracticeView);
@@ -5612,7 +5675,7 @@
 
       listTableHead.innerHTML = "";
       const headerRow = document.createElement("tr");
-      (isListEditing ? ["skill", "reps", "hide"] : ["skill", "reps", "status"]).forEach((label) => {
+      (isListEditing ? ["skill", "reps", "edit"] : ["skill", "reps", "status"]).forEach((label) => {
         const heading = document.createElement("th");
         heading.scope = "col";
         heading.textContent = label;
@@ -5632,9 +5695,9 @@
         return;
       }
 
-      (isListEditing ? list.skills : activeSkills).forEach((skill) => {
+      (isListEditing ? list.skills : activeSkills).forEach((skill, skillIndex) => {
         if (isListEditing) {
-          appendSkillEditRow(skill);
+          appendSkillEditRow(skill, skillIndex, list.skills.length);
           return;
         }
         const row = document.createElement("tr");
