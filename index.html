@@ -3332,6 +3332,7 @@
       multipleDailyRecordDate: "",
       multipleDailyRecords: {},
       showMultipleLeader: true,
+      multipleClassId: null,
       classes: [],
       selectedClassId: null,
       stopwatch: {
@@ -4494,6 +4495,9 @@
           state.selectedClassId = state.classes.some((savedClass) => savedClass.id === saved.selectedClassId)
             ? saved.selectedClassId
             : state.classes[0]?.id || null;
+          state.multipleClassId = typeof saved.multipleClassId === "string" && state.classes.some((savedClass) => savedClass.id === saved.multipleClassId)
+            ? saved.multipleClassId
+            : null;
           state.stopwatch = normalizeStopwatchState(saved.stopwatch, state.classes);
 
           state.lists = normalizeLists(saved.lists);
@@ -4513,6 +4517,7 @@
         state.multipleDailyRecordDate = "";
         state.multipleDailyRecords = {};
         state.showMultipleLeader = true;
+        state.multipleClassId = null;
         state.classes = [];
         state.selectedClassId = null;
         state.stopwatch = normalizeStopwatchState(null, state.classes);
@@ -5232,6 +5237,29 @@
         .filter(Boolean);
     }
 
+    function getAddedStudentNames(previousStudents, nextStudents) {
+      const previousNames = new Set(previousStudents.map(normalizeMultipleName));
+      const nextNames = new Set(nextStudents.map(normalizeMultipleName));
+      if (previousNames.size && Array.from(previousNames).some((student) => !nextNames.has(student))) return [];
+      return nextStudents.filter((student) => !previousNames.has(normalizeMultipleName(student)));
+    }
+
+    function appendStudentsToActiveMultipleClass(classId, students) {
+      if (state.multipleClassId !== classId || !students.length) return 0;
+
+      const activeNames = new Set(state.multiple.map((counter) => normalizeMultipleName(counter.name)));
+      const additions = students.filter((student) => !activeNames.has(normalizeMultipleName(student)));
+      if (!additions.length) return 0;
+
+      state.multiple.push(...additions.map((name) => ({
+        id: makeId("student"),
+        name: normalizeMultipleName(name),
+        score: 0,
+        hidden: false
+      })));
+      return additions.length;
+    }
+
     function openNewClassDialog() {
       streakCounter.cancelConfirmations(true);
       selectedClassEditId = null;
@@ -5318,11 +5346,16 @@
         return false;
       }
       let savedClass = existingClass;
+      let addedToMultiple = 0;
+      let addedToStreak = 0;
       if (existingClass) {
+        const addedStudents = getAddedStudentNames(existingClass.students, students);
         existingClass.neededByStudent = normalizeNeededByStudent(existingClass.neededByStudent, students);
         existingClass.name = name;
         existingClass.students = students;
         state.selectedClassId = existingClass.id;
+        addedToMultiple = appendStudentsToActiveMultipleClass(existingClass.id, addedStudents);
+        addedToStreak = streakCounter.appendStudentsToActiveClass(existingClass, addedStudents);
       } else {
         const currentNeeded = state.mode === "streak" ? streakCounter.getNeededByStudent() : {};
         savedClass = {
@@ -5340,7 +5373,13 @@
       renderMultiple();
       streakCounter.render();
       renderStopwatch();
-      statusbar.textContent = name + " saved with " + students.length + " students";
+      const preservedProgressModes = [
+        addedToMultiple ? "multiple" : "",
+        addedToStreak ? "streak" : ""
+      ].filter(Boolean);
+      statusbar.textContent = preservedProgressModes.length
+        ? name + " saved; " + (addedToMultiple || addedToStreak) + " name" + ((addedToMultiple || addedToStreak) === 1 ? "" : "s") + " added without resetting " + preservedProgressModes.join(" and ") + " progress"
+        : name + " saved with " + students.length + " students";
       return true;
     }
 
@@ -5374,6 +5413,7 @@
         savedClass.students.map((name) => ({ name, score: 0 })),
         "student"
       );
+      state.multipleClassId = savedClass.id;
       saveState();
       if (returnToMultiple) {
         setMode("multiple");
@@ -5396,6 +5436,7 @@
 
       state.classes = state.classes.filter((item) => item.id !== savedClass.id);
       state.selectedClassId = state.classes[0]?.id || null;
+      if (state.multipleClassId === savedClass.id) state.multipleClassId = null;
       streakCounter.unlinkClass(savedClass.id);
       unlinkStopwatchClass(savedClass.id);
       saveState();
@@ -7993,6 +8034,22 @@
         saveStreakState(savedClass.name.toLowerCase() + " loaded with fresh scores");
       }
 
+      function appendStudentsToActiveClass(savedClass, students) {
+        if (streakState.activeClassId !== savedClass.id || !students.length) return 0;
+
+        const activeNames = new Set(streakState.students.map((student) => normalizeMultipleName(student.name)));
+        const additions = students.filter((student) => !activeNames.has(normalizeMultipleName(student)));
+        if (!additions.length) return 0;
+
+        rememberStreakState();
+        additions.forEach((name) => {
+          streakState.students.push(makeStreakStudent(name, savedClass.neededByStudent?.[normalizeMultipleName(name)] || 3));
+        });
+        renderAll();
+        saveStreakState();
+        return additions.length;
+      }
+
       function resetScores() {
         if (!scoreResetArmed) {
           armScoreResetConfirm();
@@ -8144,6 +8201,7 @@
           return streakState.students.some((student) => student.streak !== 0 || student.points !== 0);
         },
         loadClass: loadStreakClass,
+        appendStudentsToActiveClass,
         unlinkClass(classId) {
           const activeClassWasUnlinked = streakState.activeClassId === classId;
           clearAllStreakConfirmations();
