@@ -5400,28 +5400,32 @@
       }
 
       if (state.mode === "streak") {
-        if (streakCounter.hasProgress() && !window.confirm("Load " + savedClass.name + " and reset the current streaks and points?")) return;
+        if (!streakCounter.isActiveClass(savedClass.id) && streakCounter.hasProgress() && !window.confirm("Load " + savedClass.name + " and reset the current streaks and points?")) return;
         streakCounter.loadClass(savedClass);
         return;
       }
 
-      if (state.multiple.some((item) => item.score !== 0) && !window.confirm("Load " + savedClass.name + " and reset the current scores?")) return;
+      const preserveMultipleProgress = state.multipleClassId === savedClass.id;
+      if (!preserveMultipleProgress && state.multiple.some((item) => item.score !== 0) && !window.confirm("Load " + savedClass.name + " and reset the current scores?")) return;
 
       const returnToMultiple = state.mode === "single" || state.mode === "list";
       cancelCounterClear(false);
+      const currentCountersByName = new Map(state.multiple.map((counter) => [normalizeMultipleName(counter.name), counter]));
       state.multiple = normalizeCounters(
-        savedClass.students.map((name) => ({ name, score: 0 })),
+        savedClass.students.map((name) => preserveMultipleProgress
+          ? currentCountersByName.get(normalizeMultipleName(name)) || { name, score: 0 }
+          : { name, score: 0 }),
         "student"
       );
       state.multipleClassId = savedClass.id;
       saveState();
       if (returnToMultiple) {
         setMode("multiple");
-        statusbar.textContent = savedClass.name + " loaded in multiple with fresh scores";
+        statusbar.textContent = savedClass.name + (preserveMultipleProgress ? " loaded with current scores kept" : " loaded in multiple with fresh scores");
         return;
       }
       renderMultiple();
-      statusbar.textContent = savedClass.name + " loaded with fresh scores";
+      statusbar.textContent = savedClass.name + (preserveMultipleProgress ? " loaded with current scores kept" : " loaded with fresh scores");
     }
 
     function deleteSelectedClass() {
@@ -8021,17 +8025,19 @@
       }
 
       function loadStreakClass(savedClass) {
+        const preserveStreakProgress = streakState.activeClassId === savedClass.id;
+        const currentStudentsByName = new Map(streakState.students.map((student) => [normalizeMultipleName(student.name), student]));
         rememberStreakState();
         streakState.activeClassId = savedClass.id;
         streakState.rosterName = savedClass.name;
         streakState.defaultTarget = 3;
         streakState.screen = "points";
         streakState.mode = "individual";
-        streakState.students = savedClass.students.map((name) =>
-          makeStreakStudent(name, savedClass.neededByStudent?.[name.toLowerCase()] || 3)
-        );
+        streakState.students = savedClass.students.map((name) => preserveStreakProgress
+          ? currentStudentsByName.get(normalizeMultipleName(name)) || makeStreakStudent(name, savedClass.neededByStudent?.[name.toLowerCase()] || 3)
+          : makeStreakStudent(name, savedClass.neededByStudent?.[name.toLowerCase()] || 3));
         renderAll();
-        saveStreakState(savedClass.name.toLowerCase() + " loaded with fresh scores");
+        saveStreakState(savedClass.name.toLowerCase() + (preserveStreakProgress ? " loaded with current scores kept" : " loaded with fresh scores"));
       }
 
       function appendStudentsToActiveClass(savedClass, students) {
@@ -8199,6 +8205,9 @@
         },
         hasProgress() {
           return streakState.students.some((student) => student.streak !== 0 || student.points !== 0);
+        },
+        isActiveClass(classId) {
+          return streakState.activeClassId === classId;
         },
         loadClass: loadStreakClass,
         appendStudentsToActiveClass,
