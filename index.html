@@ -3,6 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#8ace00">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Tally Clicker">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <title>Tally Clicker</title>
   <style>
     * {
@@ -8236,6 +8242,23 @@
     streakCounter.load();
     render();
     loadStudentShufflerClasses({ announce: true });
+  </script>
+  <script src="temporary-data-transfer.js"></script>
+  <script>
+    window.TemporaryDataTransfer.install({
+      appId: "tally-clicker",
+      appName: "Tally Clicker",
+      storageKeys: [
+        "custom-points-counter-state-v5",
+        "custom-points-counter-state-v4",
+        "custom-points-counter-state-v3",
+        "custom-points-counter-state-v2",
+        "custom-points-counter-value-v1",
+        "streak-counter-state-v2",
+        "streak-counter-state-v1",
+        "streak-counter-sound-v1"
+      ]
+    });
   </script>
 </body>
 </html>
