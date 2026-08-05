@@ -8242,7 +8242,15 @@
     streakCounter.load();
     render();
     loadStudentShufflerClasses({ announce: true });
+    window.addEventListener("tally-semantic-sync-remote-applied", () => {
+      loadState();
+      streakCounter.load();
+      render();
+      statusbar.textContent = "private records synced";
+    });
   </script>
+  <script src="semantic-app-sync.js"></script>
+  <script src="tally-storage.js"></script>
   <script src="temporary-data-transfer.js"></script>
   <script>
     window.TemporaryDataTransfer.install({
@@ -8257,7 +8265,13 @@
         "streak-counter-state-v2",
         "streak-counter-state-v1",
         "streak-counter-sound-v1"
-      ]
+      ],
+      disableRawSync: true
+    });
+    window.SemanticAppSync.install({
+      appId: "tally-clicker",
+      appName: "Tally Clicker",
+      storage: window.TallyStorage
     });
   </script>
 </body>
