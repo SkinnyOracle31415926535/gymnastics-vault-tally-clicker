@@ -96,3 +96,42 @@ test("Student Shuffle schema validation rejects invalid selected-class settings"
   ];
   assert.match(api.validateByApp("student-shuffle", records), /selected Student Shuffle class/);
 });
+
+test("prior private-sync recovery turns only allowlisted remote rows into a reviewable import bundle", () => {
+  const { api } = load();
+  const tallyOptions = {
+    appId: "tally-clicker",
+    appName: "Tally Clicker",
+    storageKeys: [
+      "custom-points-counter-state-v5", "custom-points-counter-state-v4",
+      "custom-points-counter-state-v3", "custom-points-counter-state-v2",
+      "custom-points-counter-value-v1", "streak-counter-state-v2",
+      "streak-counter-state-v1", "streak-counter-sound-v1",
+    ],
+    validate: () => true,
+  };
+  const bundle = api.buildLegacyPrivateRecoveryBundle(tallyOptions, {
+    version: 1,
+    appId: "tally-clicker",
+    collection: "browser-storage",
+    records: [{
+      recordId: "custom-points-counter-state-v5",
+      revision: 3,
+      updatedAt: "2026-08-05T00:00:00.000Z",
+      value: { present: true, encoding: "json", value: { multiple: [] } },
+    }],
+  });
+  assert.equal(bundle.source, "prior-private-sync-recovery");
+  assert.equal(bundle.records.filter((record) => record.present).length, 1);
+  assert.throws(() => api.buildLegacyPrivateRecoveryBundle(tallyOptions, {
+    version: 1,
+    appId: "tally-clicker",
+    collection: "browser-storage",
+    records: [{
+      recordId: "unexpected-key",
+      revision: 3,
+      updatedAt: "2026-08-05T00:00:00.000Z",
+      value: { present: true, encoding: "text", value: "no" },
+    }],
+  }), /unsupported record/);
+});

@@ -11,6 +11,17 @@ const COLLECTION_RULES = Object.freeze({
   "streak-students": Object.freeze({ pattern: /^student-[A-Za-z0-9_-]{1,232}$/ }),
   sound: Object.freeze({ fixedIds: new Set(["current"]) }),
 });
+const LEGACY_COLLECTION = "browser-storage";
+const LEGACY_RECORD_IDS = new Set([
+  "custom-points-counter-state-v5",
+  "custom-points-counter-state-v4",
+  "custom-points-counter-state-v3",
+  "custom-points-counter-state-v2",
+  "custom-points-counter-value-v1",
+  "streak-counter-state-v2",
+  "streak-counter-state-v1",
+  "streak-counter-sound-v1",
+]);
 const MAX_BODY_BYTES = 1_200_000;
 const MAX_VALUE_BYTES = 900 * 1024;
 const MAX_DEPTH = 48;
@@ -113,6 +124,19 @@ function validateSyncValue(value) {
   return byteLength(serialized) <= MAX_VALUE_BYTES ? value : null;
 }
 
+function validateLegacySyncValue(value) {
+  if (!exactKeys(value, ["present", "encoding", "value"])
+    || typeof value.present !== "boolean"
+    || !["json", "text"].includes(value.encoding)) return null;
+  if (!value.present) return value.encoding === "text" && value.value === null ? value : null;
+  if (value.encoding === "text") {
+    return typeof value.value === "string" && byteLength(value.value) <= MAX_VALUE_BYTES ? value : null;
+  }
+  if (!safeJson(value.value)) return null;
+  const serialized = JSON.stringify(value.value);
+  return byteLength(serialized) <= MAX_VALUE_BYTES ? value : null;
+}
+
 async function readBody(request) {
   const contentType = request.headers.get("content-type")?.toLowerCase() || "";
   if (!contentType.startsWith("application/json")) return { error: "Use JSON for private sync.", status: 415 };
@@ -137,6 +161,26 @@ async function currentRecord(database, owner, collection, recordId) {
 async function handleGet(request, database, owner) {
   const url = new URL(request.url);
   if (url.searchParams.get("appId") !== APP_ID) return json({ error: "This sync request targets the wrong app." }, 400);
+  if (url.searchParams.get("legacy") === LEGACY_COLLECTION) {
+    const result = await database.prepare(`SELECT record_id, revision, payload_json, updated_at
+      FROM app_sync_records
+      WHERE owner_id = ? AND app_id = ? AND collection_name = ?
+      ORDER BY record_id COLLATE NOCASE`)
+      .bind(owner, APP_ID, LEGACY_COLLECTION)
+      .all();
+    const records = [];
+    for (const row of result.results) {
+      if (!LEGACY_RECORD_IDS.has(row.record_id)) continue;
+      try {
+        const value = validateLegacySyncValue(JSON.parse(row.payload_json));
+        if (!value) return json({ error: "A prior private-sync record is invalid and needs review." }, 409);
+        records.push({ recordId: row.record_id, revision: row.revision, value, updatedAt: row.updated_at });
+      } catch {
+        return json({ error: "A prior private-sync record is invalid and needs review." }, 409);
+      }
+    }
+    return json({ version: 1, appId: APP_ID, collection: LEGACY_COLLECTION, records });
+  }
   const collections = Object.keys(COLLECTION_RULES);
   const placeholders = collections.map(() => "?").join(", ");
   const result = await database.prepare(`SELECT collection_name, record_id, revision, payload_json, updated_at
